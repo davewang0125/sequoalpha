@@ -122,9 +122,10 @@ body {
   color: rgba(9,24,40,1);
   position: absolute;
   top: 1228px;
-  left: 1492px;
+  left: 200px;
   opacity: 1;
   text-align: left;
+  font-size: 18px;
 }
 .v1_32 {
   width: 145px;
@@ -357,9 +358,9 @@ body {
   left: 0px;
   font-family: Poppins;
   font-weight: Regular;
-  font-size: 12px;
+  font-size: 15px;
   opacity: 1;
-  text-align: left;
+  text-align: right;
 }
 .name {
   color: #fff;
