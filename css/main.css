@@ -54,6 +54,7 @@ body {
   border-bottom-left-radius: 40px;
   border-bottom-right-radius: 40px;
   overflow: hidden;
+  display: none;
 }
 .v1_26 {
   width: 165px;
