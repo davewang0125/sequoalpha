@@ -1,0 +1,45 @@
+.app {
+  min-height: 100vh;
+  font-family: 'Poppins', sans-serif;
+}
+
+.success-message {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #f0fff4;
+  color: #22543d;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  border: 1px solid #9ae6b4;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Global styles */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Poppins', sans-serif;
+  line-height: 1.6;
+}
+
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');

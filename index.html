@@ -1,28 +1,36 @@
-<!DOCTYPE html><html>
-  <head><link href="https://fonts.googleapis.com/css?family=Poppins&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css?family=Space+Grotesk&display=swap" rel="stylesheet" />
-    <link rel="icon" type="image/png" href="/favicon64.png" />
-    <link href="./css/main.css" rel="stylesheet" /><title>SequoAlpha Management LLC</title></head>
-  <body><div class="v1_20">
-    <div class="v1_21"><div class="v1_22">
-      <div class="v1_23">
-        <!--
-        <form class="login-form" action="#" method="post">
-          <label for="username">Username:</label>
-          <input type="text" id="username" name="username" />
-          <label for="password">Password:</label>
-          <input for="password" type="password" id="password" name="password" />
-          <button type="submit">Login</button>
-        </form>
-      -->
-      </div>
-    </div><span class="v1_26"></span></div>
-    <div class="v1_27"></div>
-    <div class="v1_28"><span class="v1_29">© 2025 SequoAlpha Management LP. All rights reserved.</span>
-      </div>
-      <span class="v1_31">Address:
-                          319 N Bernardo Ave,
-                          Mountainview, CA 94043       
-                          Phone: 650-308-9049</span>
-                              </div>
-<div class="name"></div><div class="v2_257"><div class="v2_258"></div></div><span class="v2_260">SequoAlpha Management LLC is an Exempt Reporting Advisor managing private investment funds exclusively for qualified investors. For more information, please contact us at 650-308-9049 or send us an email info@sequoalpha.com. Access to this site is authorized and permitted solely for those persons who have agreed to SequoAlpha Management LLC's Terms of Service and who have received from SequoAlpha a valid User ID and Password. Unauthorized access is a violation of 18 U.S.C. 1030 and may subject you to civil liability and criminal prosecution.</span></div></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SequoAlpha Management - Secure Login</title>
+    <link rel="icon" type="image/png" href="./favicon64.png" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- React and ReactDOM CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="./frontend/js/App.css">
+    <link rel="stylesheet" href="./frontend/js/Login.css">
+    <link rel="stylesheet" href="./frontend/js/Dashboard.css">
+</head>
+<body>
+    <div id="root"></div>
+
+    <!-- Main App Component -->
+    <script type="text/babel" src="./frontend/js/App.js"></script>
+    <script type="text/babel" src="./frontend/js/Login.js"></script>
+    <script type="text/babel" src="./frontend/js/Dashboard.js"></script>
+    
+    <!-- Render the App -->
+    <script type="text/babel">
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

@@ -1,0 +1,209 @@
+.dashboard {
+  min-height: 100vh;
+  background: #f8f9fa;
+  font-family: 'Poppins', sans-serif;
+}
+
+.dashboard-nav {
+  background: white;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.nav-brand h1 {
+  color: #333;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.nav-user {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.nav-user span {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.logout-button {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.3s ease;
+}
+
+.logout-button:hover {
+  background: #c82333;
+}
+
+.dashboard-main {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.dashboard-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.welcome-section {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  text-align: center;
+}
+
+.welcome-section h2 {
+  color: #333;
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.welcome-section p {
+  color: #666;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.loading-section {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  text-align: center;
+}
+
+.loading-section p {
+  color: #666;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.dashboard-info {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.dashboard-info h3 {
+  color: #333;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.dashboard-info p {
+  color: #666;
+  margin: 0.5rem 0;
+  font-size: 1rem;
+}
+
+.dashboard-info strong {
+  color: #333;
+}
+
+.info-section {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.info-section h3 {
+  color: #333;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.info-section p {
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+.contact-info {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+}
+
+.contact-info p {
+  margin: 0.5rem 0;
+  color: #495057;
+}
+
+.contact-info strong {
+  color: #333;
+}
+
+.error-message {
+  background: #fee;
+  color: #c53030;
+  padding: 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  border: 1px solid #feb2b2;
+  margin-top: 1rem;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .dashboard-nav {
+    padding: 1rem;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .nav-user {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .dashboard-main {
+    padding: 1rem;
+  }
+  
+  .welcome-section h2 {
+    font-size: 1.5rem;
+  }
+  
+  .welcome-section,
+  .dashboard-info,
+  .info-section {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-nav {
+    text-align: center;
+  }
+  
+  .nav-brand h1 {
+    font-size: 1.2rem;
+  }
+  
+  .welcome-section h2 {
+    font-size: 1.3rem;
+  }
+}
