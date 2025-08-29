@@ -1,6 +1,6 @@
 
 
-const Dashboard = ({ user, onLogout }) => {
+const Dashboard = ({ user, onLogout, onOpenDocumentCenter }) => {
   const [dashboardData, setDashboardData] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState('');
@@ -57,6 +57,17 @@ const Dashboard = ({ user, onLogout }) => {
           <div className="welcome-section">
             <h2>Welcome to SequoAlpha Management LLC</h2>
             <p>You are now logged into the secure portal.</p>
+            
+            {user?.is_admin && (
+              <div className="admin-actions">
+                <button 
+                  className="document-center-btn"
+                  onClick={onOpenDocumentCenter}
+                >
+                  📄 Document Center
+                </button>
+              </div>
+            )}
           </div>
 
           {loading && (

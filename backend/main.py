@@ -1,9 +1,11 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import jwt
 from datetime import datetime, timedelta
 import bcrypt
 import os
+import uuid
+from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,9 +18,24 @@ SECRET_KEY = os.getenv("SECRET_KEY", "sequoalpha-secret-key-change-in-production
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
+# File upload configuration
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'pdf'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Ensure upload folder exists
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 # Simple in-memory database
 users_db = {}
 user_id_counter = 1
+
+# Documents database
+documents_db = {}
+document_id_counter = 1
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def create_default_admin():
     global user_id_counter
@@ -165,7 +182,8 @@ def read_users_me():
         "username": current_user["username"],
         "email": current_user["email"],
         "full_name": current_user["full_name"],
-        "is_active": current_user["is_active"]
+        "is_active": current_user["is_active"],
+        "is_admin": current_user["is_admin"]
     })
 
 @app.route('/dashboard', methods=['GET'])
@@ -185,12 +203,252 @@ def dashboard():
         "timestamp": datetime.utcnow().isoformat()
     })
 
+# Document management endpoints
+@app.route('/admin/documents', methods=['GET'])
+def get_documents():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"detail": "Token required"}), 401
+    
+    token = auth_header.split(' ')[1]
+    current_user = get_current_user(token)
+    if not current_user:
+        return jsonify({"detail": "Invalid token"}), 401
+    
+    # Get filter parameters
+    category = request.args.get('category', 'All')
+    
+    documents = list(documents_db.values())
+    
+    # Filter by category if specified
+    if category != 'All':
+        documents = [doc for doc in documents if doc['category'] == category]
+    
+    # Calculate statistics
+    total_documents = len(documents_db)
+    new_this_month = len([doc for doc in documents_db.values() 
+                         if doc['created_at'].month == datetime.utcnow().month])
+    categories = len(set(doc['category'] for doc in documents_db.values()))
+    last_updated = max([doc['created_at'] for doc in documents_db.values()]).strftime('%b %d') if documents_db else 'Never'
+    
+    return jsonify({
+        "documents": documents,
+        "statistics": {
+            "total_documents": total_documents,
+            "new_this_month": new_this_month,
+            "categories": categories,
+            "last_updated": last_updated
+        }
+    })
+
+@app.route('/admin/documents/upload', methods=['POST'])
+def upload_document():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"detail": "Admin token required"}), 401
+    
+    token = auth_header.split(' ')[1]
+    current_admin = get_current_admin(token)
+    if not current_admin:
+        return jsonify({"detail": "Admin privileges required"}), 403
+    
+    if 'file' not in request.files:
+        return jsonify({"detail": "No file provided"}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"detail": "No file selected"}), 400
+    
+    if not allowed_file(file.filename):
+        return jsonify({"detail": "Only PDF files are allowed"}), 400
+    
+    # Get form data
+    title = request.form.get('title', '')
+    description = request.form.get('description', '')
+    category = request.form.get('category', 'Other')
+    
+    if not title:
+        return jsonify({"detail": "Title is required"}), 400
+    
+    # Generate unique filename
+    filename = secure_filename(file.filename)
+    unique_filename = f"{uuid.uuid4()}_{filename}"
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+    
+    # Save file
+    file.save(file_path)
+    
+    # Get file size
+    file_size = os.path.getsize(file_path)
+    file_size_mb = round(file_size / (1024 * 1024), 1)
+    
+    # Create document record
+    global document_id_counter
+    document = {
+        "id": document_id_counter,
+        "title": title,
+        "description": description,
+        "category": category,
+        "type": "PDF",
+        "filename": unique_filename,
+        "file_size": f"{file_size_mb} MB",
+        "is_external": False,
+        "external_url": None,
+        "created_at": datetime.utcnow(),
+        "is_new": True
+    }
+    
+    documents_db[document_id_counter] = document
+    document_id_counter += 1
+    
+    return jsonify(document)
+
+@app.route('/admin/documents/link', methods=['POST'])
+def add_document_link():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"detail": "Admin token required"}), 401
+    
+    token = auth_header.split(' ')[1]
+    current_admin = get_current_admin(token)
+    if not current_admin:
+        return jsonify({"detail": "Admin privileges required"}), 403
+    
+    data = request.get_json()
+    title = data.get('title')
+    description = data.get('description')
+    category = data.get('category', 'Other')
+    external_url = data.get('external_url')
+    
+    if not title or not external_url:
+        return jsonify({"detail": "Title and URL are required"}), 400
+    
+    # Create document record
+    global document_id_counter
+    document = {
+        "id": document_id_counter,
+        "title": title,
+        "description": description,
+        "category": category,
+        "type": "LINK",
+        "filename": None,
+        "file_size": "N/A",
+        "is_external": True,
+        "external_url": external_url,
+        "created_at": datetime.utcnow(),
+        "is_new": True
+    }
+    
+    documents_db[document_id_counter] = document
+    document_id_counter += 1
+    
+    return jsonify(document)
+
+@app.route('/admin/documents/<int:document_id>', methods=['DELETE'])
+def delete_document(document_id):
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"detail": "Admin token required"}), 401
+    
+    token = auth_header.split(' ')[1]
+    current_admin = get_current_admin(token)
+    if not current_admin:
+        return jsonify({"detail": "Admin privileges required"}), 403
+    
+    if document_id not in documents_db:
+        return jsonify({"detail": "Document not found"}), 404
+    
+    document = documents_db[document_id]
+    
+    # Delete file if it exists
+    if document['filename'] and os.path.exists(os.path.join(app.config['UPLOAD_FOLDER'], document['filename'])):
+        os.remove(os.path.join(app.config['UPLOAD_FOLDER'], document['filename']))
+    
+    # Remove from database
+    del documents_db[document_id]
+    
+    return jsonify({"message": "Document deleted successfully"})
+
+@app.route('/documents/<filename>', methods=['GET'])
+def download_document(filename):
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"detail": "Token required"}), 401
+    
+    token = auth_header.split(' ')[1]
+    current_user = get_current_user(token)
+    if not current_user:
+        return jsonify({"detail": "Invalid token"}), 401
+    
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
 @app.route('/', methods=['GET'])
 def root():
     return jsonify({"message": "SequoAlpha Management API - Secure Access Only"})
 
-# Initialize default admin user
+def create_sample_documents():
+    global document_id_counter
+    sample_docs = [
+        {
+            "id": document_id_counter,
+            "title": "Q2 2025 Performance Report",
+            "description": "Quarterly performance review and market analysis",
+            "category": "Reports",
+            "type": "PDF",
+            "filename": "sample_report.pdf",
+            "file_size": "2.4 MB",
+            "is_external": False,
+            "external_url": None,
+            "created_at": datetime.utcnow(),
+            "is_new": True
+        },
+        {
+            "id": document_id_counter + 1,
+            "title": "Meridian Growth Fund Factsheet",
+            "description": "Fund overview, strategy, and key metrics",
+            "category": "Factsheets",
+            "type": "PDF",
+            "filename": "factsheet.pdf",
+            "file_size": "1.2 MB",
+            "is_external": False,
+            "external_url": None,
+            "created_at": datetime.utcnow(),
+            "is_new": True
+        },
+        {
+            "id": document_id_counter + 2,
+            "title": "Limited Partnership Agreement",
+            "description": "Terms and conditions of partnership",
+            "category": "Legal",
+            "type": "PDF",
+            "filename": "agreement.pdf",
+            "file_size": "3.8 MB",
+            "is_external": False,
+            "external_url": None,
+            "created_at": datetime.utcnow(),
+            "is_new": False
+        },
+        {
+            "id": document_id_counter + 3,
+            "title": "Monthly Market Commentary",
+            "description": "August market insights and outlook",
+            "category": "Reports",
+            "type": "LINK",
+            "filename": None,
+            "file_size": "N/A",
+            "is_external": True,
+            "external_url": "https://example.com/market-commentary.pdf",
+            "created_at": datetime.utcnow(),
+            "is_new": True
+        }
+    ]
+    
+    for doc in sample_docs:
+        documents_db[doc["id"]] = doc
+        document_id_counter += 1
+
 create_default_admin()
+create_sample_documents()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000, debug=True)

@@ -3,6 +3,7 @@
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const [user, setUser] = React.useState(null);
+  const [currentView, setCurrentView] = React.useState('dashboard'); // 'dashboard' or 'documentCenter'
 
   React.useEffect(() => {
     // Check if user is already logged in
@@ -25,10 +26,22 @@ const App = () => {
     localStorage.removeItem('user');
     setIsAuthenticated(false);
     setUser(null);
+    setCurrentView('dashboard');
+  };
+
+  const handleOpenDocumentCenter = () => {
+    setCurrentView('documentCenter');
+  };
+
+  const handleBackToDashboard = () => {
+    setCurrentView('dashboard');
   };
 
   if (isAuthenticated) {
-    return <Dashboard user={user} onLogout={handleLogout} />;
+    if (currentView === 'documentCenter') {
+      return <DocumentCenter token={localStorage.getItem('token')} onBack={handleBackToDashboard} />;
+    }
+    return <Dashboard user={user} onLogout={handleLogout} onOpenDocumentCenter={handleOpenDocumentCenter} />;
   }
 
   return (

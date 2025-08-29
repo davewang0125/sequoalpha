@@ -24,8 +24,23 @@ const Login = ({ onLogin }) => {
 
       if (response.ok) {
         localStorage.setItem('token', data.access_token);
-        localStorage.setItem('user', JSON.stringify({ username }));
-        onLogin({ username });
+        
+        // Get user info with the token
+        const userResponse = await fetch('http://localhost:8000/users/me', {
+          headers: {
+            'Authorization': `Bearer ${data.access_token}`
+          }
+        });
+        
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          localStorage.setItem('user', JSON.stringify(userData));
+          onLogin(userData);
+        } else {
+          // Fallback to basic user info
+          localStorage.setItem('user', JSON.stringify({ username }));
+          onLogin({ username });
+        }
       } else {
         setError(data.detail || 'Login failed');
       }
