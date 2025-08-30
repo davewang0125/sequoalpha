@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: sequoalpha-backend
+    env: python
+    buildCommand: pip install -r requirements-prod.txt
+    startCommand: chmod +x start.sh && ./start.sh
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sequoalpha-db
+          property: connectionString
+
+databases:
+  - name: sequoalpha-db
+    databaseName: sequoalpha
+    user: sequoalpha_user

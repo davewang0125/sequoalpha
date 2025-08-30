@@ -15,7 +15,7 @@ const Dashboard = ({ user, onLogout, onOpenDocumentCenter }) => {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8000/dashboard', {
+      const response = await fetch(`${window.API_BASE_URL}/dashboard`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
