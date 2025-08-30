@@ -12,7 +12,14 @@ from models import db, User, Document
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={
+    r"/*": {
+        "origins": ["http://localhost:8080", "http://localhost:3000", "https://your-netlify-domain.netlify.app"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True
+    }
+})
 
 # Database configuration
 import os
@@ -261,6 +268,29 @@ def get_documents():
         }
     })
 
+# User document access endpoint (for regular users)
+@app.route('/documents', methods=['GET'])
+def get_user_documents():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"detail": "Token required"}), 401
+    
+    token = auth_header.split(' ')[1]
+    current_user = get_current_user(token)
+    if not current_user:
+        return jsonify({"detail": "Invalid token"}), 401
+    
+    # Get filter parameters
+    category = request.args.get('category', 'All')
+    
+    # Query documents (same as admin but without statistics)
+    if category != 'All':
+        documents = Document.query.filter_by(category=category).all()
+    else:
+        documents = Document.query.all()
+    
+    return jsonify([doc.to_dict() for doc in documents])
+
 @app.route('/admin/documents/upload', methods=['POST'])
 def upload_document():
     auth_header = request.headers.get('Authorization')
@@ -384,6 +414,50 @@ def delete_document(document_id):
     db.session.commit()
     
     return jsonify({"message": "Document deleted successfully"})
+
+@app.route('/admin/documents/<int:document_id>/download', methods=['GET'])
+def download_document_by_id(document_id):
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({"detail": "Token required"}), 401
+        
+        token = auth_header.split(' ')[1]
+        current_user = get_current_user(token)
+        if not current_user:
+            return jsonify({"detail": "Invalid token"}), 401
+        
+        # Get document from database
+        document = Document.query.get(document_id)
+        if not document:
+            return jsonify({"detail": "Document not found"}), 404
+        
+        if not document.filename:
+            return jsonify({"detail": "No file associated with this document"}), 400
+        
+        # Check if file exists
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], document.filename)
+        if not os.path.exists(file_path):
+            return jsonify({"detail": "File not found"}), 404
+        
+        # Set proper headers for file download
+        response = send_from_directory(
+            app.config['UPLOAD_FOLDER'], 
+            document.filename, 
+            as_attachment=True,
+            download_name=document.title.replace(' ', '_') + '.pdf'
+        )
+        
+        # Add CORS headers for download
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Authorization, Content-Type'
+        
+        return response
+        
+    except Exception as e:
+        print(f"Download error: {str(e)}")
+        return jsonify({"detail": "Download failed"}), 500
 
 @app.route('/documents/<filename>', methods=['GET'])
 def download_document(filename):

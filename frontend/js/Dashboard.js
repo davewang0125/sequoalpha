@@ -4,6 +4,11 @@ const Dashboard = ({ user, onLogout, onOpenDocumentCenter }) => {
   const [dashboardData, setDashboardData] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState('');
+  const [showChangePassword, setShowChangePassword] = React.useState(false);
+  const [showCreateUser, setShowCreateUser] = React.useState(false);
+  const [passwordData, setPasswordData] = React.useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [userData, setUserData] = React.useState({ username: '', email: '', password: '', fullName: '' });
+  const [message, setMessage] = React.useState('');
 
   React.useEffect(() => {
     fetchDashboardData();
@@ -38,6 +43,71 @@ const Dashboard = ({ user, onLogout, onOpenDocumentCenter }) => {
     onLogout();
   };
 
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setMessage('New passwords do not match');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${window.API_BASE_URL}/admin/change-password`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          current_password: passwordData.currentPassword,
+          new_password: passwordData.newPassword
+        })
+      });
+
+      if (response.ok) {
+        setMessage('Password changed successfully!');
+        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        setShowChangePassword(false);
+      } else {
+        const errorData = await response.json();
+        setMessage(errorData.detail || 'Failed to change password');
+      }
+    } catch (err) {
+      setMessage('Network error');
+    }
+  };
+
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${window.API_BASE_URL}/admin/create-user`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          username: userData.username,
+          email: userData.email,
+          password: userData.password,
+          full_name: userData.fullName
+        })
+      });
+
+      if (response.ok) {
+        setMessage('User created successfully!');
+        setUserData({ username: '', email: '', password: '', fullName: '' });
+        setShowCreateUser(false);
+      } else {
+        const errorData = await response.json();
+        setMessage(errorData.detail || 'Failed to create user');
+      }
+    } catch (err) {
+      setMessage('Network error');
+    }
+  };
+
   return (
     <div className="dashboard">
       <nav className="dashboard-nav">
@@ -60,15 +130,35 @@ const Dashboard = ({ user, onLogout, onOpenDocumentCenter }) => {
             
             {user?.is_admin && (
               <div className="admin-actions">
-                <button 
-                  className="document-center-btn"
-                  onClick={onOpenDocumentCenter}
-                >
-                  📄 Document Center
-                </button>
+                <div className="admin-buttons">
+                  <button 
+                    className="admin-btn primary"
+                    onClick={() => setShowChangePassword(true)}
+                  >
+                    🔐 Change Password
+                  </button>
+                  <button 
+                    className="admin-btn primary"
+                    onClick={() => setShowCreateUser(true)}
+                  >
+                    👤 Create User
+                  </button>
+                  <button 
+                    className="admin-btn primary"
+                    onClick={onOpenDocumentCenter}
+                  >
+                    📄 Document Center
+                  </button>
+                </div>
               </div>
             )}
           </div>
+
+          {message && (
+            <div className={`message ${message.includes('successfully') ? 'success' : 'error'}`}>
+              {message}
+            </div>
+          )}
 
           {loading && (
             <div className="loading-section">
@@ -104,6 +194,127 @@ const Dashboard = ({ user, onLogout, onOpenDocumentCenter }) => {
           </div>
         </div>
       </main>
+
+      {/* Change Password Modal */}
+      {showChangePassword && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h3>Change Password</h3>
+              <button 
+                className="close-btn"
+                onClick={() => setShowChangePassword(false)}
+              >
+                ×
+              </button>
+            </div>
+            <form onSubmit={handleChangePassword} className="modal-form">
+              <div className="form-group">
+                <label>Current Password:</label>
+                <input
+                  type="password"
+                  value={passwordData.currentPassword}
+                  onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>New Password:</label>
+                <input
+                  type="password"
+                  value={passwordData.newPassword}
+                  onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Confirm New Password:</label>
+                <input
+                  type="password"
+                  value={passwordData.confirmPassword}
+                  onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="form-actions">
+                <button type="submit" className="btn-primary">Change Password</button>
+                <button 
+                  type="button" 
+                  className="btn-secondary"
+                  onClick={() => setShowChangePassword(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create User Modal */}
+      {showCreateUser && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h3>Create New User</h3>
+              <button 
+                className="close-btn"
+                onClick={() => setShowCreateUser(false)}
+              >
+                ×
+              </button>
+            </div>
+            <form onSubmit={handleCreateUser} className="modal-form">
+              <div className="form-group">
+                <label>Username:</label>
+                <input
+                  type="text"
+                  value={userData.username}
+                  onChange={(e) => setUserData({...userData, username: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Email:</label>
+                <input
+                  type="email"
+                  value={userData.email}
+                  onChange={(e) => setUserData({...userData, email: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Full Name:</label>
+                <input
+                  type="text"
+                  value={userData.fullName}
+                  onChange={(e) => setUserData({...userData, fullName: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Password:</label>
+                <input
+                  type="password"
+                  value={userData.password}
+                  onChange={(e) => setUserData({...userData, password: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="form-actions">
+                <button type="submit" className="btn-primary">Create User</button>
+                <button 
+                  type="button" 
+                  className="btn-secondary"
+                  onClick={() => setShowCreateUser(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
