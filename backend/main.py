@@ -58,7 +58,7 @@ try:
     
     # Test database connection
     with app.app_context():
-        db.engine.execute("SELECT 1")
+        db.session.execute(db.text("SELECT 1"))
         print("✅ Database connection test successful!")
     
     print("✅ Database initialized successfully!")
