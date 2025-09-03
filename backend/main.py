@@ -26,7 +26,7 @@ import os
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///sequoalpha.db')
 if DATABASE_URL.startswith('postgres://'):
     DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
-
+DATABASE_URL = "postgresql://sequoalpha_user:AOu9eTpHZ1dArhT0Pol2nnmHUqJ6fxej@dpg-d2rpf8ripnbc73dk5cc0-a.oregon-postgres.render.com/sequoalpha"
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
