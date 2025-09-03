@@ -12,7 +12,7 @@ const Login = ({ onLogin }) => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:8000/login', {
+      const response = await fetch(`${window.API_BASE_URL}/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -26,7 +26,7 @@ const Login = ({ onLogin }) => {
         localStorage.setItem('token', data.access_token);
         
         // Get user info with the token
-        const userResponse = await fetch('http://localhost:8000/users/me', {
+        const userResponse = await fetch(`${window.API_BASE_URL}/users/me`, {
           headers: {
             'Authorization': `Bearer ${data.access_token}`
           }
