@@ -5,6 +5,7 @@ services:
     rootDir: backend
     buildCommand: pip install -r requirements-prod.txt
     startCommand: chmod +x start.sh && ./start.sh
+    plan: free
     envVars:
       - key: SECRET_KEY
         generateValue: true
