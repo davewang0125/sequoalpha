@@ -11,32 +11,14 @@ const Dashboard = ({ user, onLogout, onOpenDocumentCenter }) => {
   const [message, setMessage] = React.useState('');
 
   React.useEffect(() => {
-    fetchDashboardData();
+    // No need to fetch dashboard data since we don't have that endpoint
+    // The dashboard will show admin options directly
+    setLoading(false);
   }, []);
 
   const fetchDashboardData = async () => {
-    setLoading(true);
-    setError('');
-    
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${window.API_BASE_URL}/dashboard`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setDashboardData(data);
-      } else {
-        setError('Failed to load dashboard data');
-      }
-    } catch (err) {
-      setError('Network error');
-    } finally {
-      setLoading(false);
-    }
+    // This function is no longer needed since we removed the /dashboard endpoint
+    setLoading(false);
   };
 
   const handleLogout = () => {
@@ -168,14 +150,7 @@ const Dashboard = ({ user, onLogout, onOpenDocumentCenter }) => {
 
           {error && <div className="error-message">{error}</div>}
 
-          {dashboardData && (
-            <div className="dashboard-info">
-              <h3>Dashboard Information</h3>
-              <p><strong>Message:</strong> {dashboardData.message}</p>
-              <p><strong>User:</strong> {dashboardData.user}</p>
-              <p><strong>Timestamp:</strong> {new Date(dashboardData.timestamp).toLocaleString()}</p>
-            </div>
-          )}
+          {/* Dashboard data section removed since we don't have that endpoint */}
 
           <div className="info-section">
             <h3>About SequoAlpha</h3>

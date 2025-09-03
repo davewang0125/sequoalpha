@@ -25,7 +25,7 @@
 .logo {
     width: 200px;
     height: 50px;
-    background: url("images/v1_27.png") no-repeat center center;
+    background: url("../images/v1_27.png") no-repeat center center;
     background-size: contain;
 }
 
@@ -56,7 +56,7 @@
 /* Hero Section */
 .hero-section {
     height: 100vh;
-    background: url("images/v1_21.png") no-repeat center center;
+    background: url("../images/v1_21.png") no-repeat center center;
     background-size: cover;
     display: flex;
     align-items: center;
