@@ -1,5 +1,16 @@
-[33m61bf1d1[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mCristian[m[33m, [m[1;31morigin/Cristian[m[33m)[m Fix Render rootDir configuration - Add rootDir: backend to render.yaml - Simplify build and start commands - Fix requirements-prod.txt path issue - Render will now execute from backend directory
-[33mb521fd5[m Fix Render deployment configuration - Move render.yaml to root directory with correct build commands - Fix buildCommand: cd backend && pip install -r requirements-prod.txt - Fix startCommand: cd backend && chmod +x start.sh && ./start.sh - Remove duplicate render.yaml from backend folder - Update API environment detection for Netlify
-[33m5a7d286[m Clean and optimize project + Fix Netlify deployment - Remove obsolete Auth0 files and endpoints - Delete testing and debug scripts - Clean up duplicate documentation - Remove unnecessary directories and cache files - Optimize backend structure - Fix relative paths for Netlify deployment - Add netlify.toml configuration - Create _redirects for SPA routing - Improve API environment detection - Fix image paths in CSS - Add build script for deployment - Keep only essential files for production
-[33m635658a[m Refactor landing page to unified React architecture - Convert landing page to React component with simplified design - Add hero section with black overlay (70% transparency) - Remove separate login.html file - Clean up duplicate and temporary files - Implement unified navigation between landing and app - Add responsive landing.css styles for modern design
-[33m17072f4[m Fix download functionality and add user dashboard - Fixed CORS issues for file downloads - Added proper error handling for download endpoint - Created sample PDF files for testing - Added UserDashboard component for regular users - Improved admin dashboard with password change and user creation - Enhanced CORS configuration for production deployment
+
+                   SSUUMMMMAARRYY OOFF LLEESSSS CCOOMMMMAANNDDSS
+
+      Commands marked with * may be preceded by a number, _N.
+      Notes in parentheses indicate the behavior if _N is given.
+      A key preceded by a caret indicates the Ctrl key; thus ^K is ctrl-K.
+
+  h  H                 Display this help.
+  q  :q  Q  :Q  ZZ     Exit.
+ ---------------------------------------------------------------------------
+
+                           MMOOVVIINNGG
+
+  e  ^E  j  ^N  CR  *  Forward  one line   (or _N lines).
+  y  ^Y  k  ^K  ^P  *  Backward one line   (or _N lines).
+  f  ^F  ^V  SPACE  *  Forward  one window (or _N lines).
