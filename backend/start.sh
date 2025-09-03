@@ -1,6 +1,6 @@
-#!/bin/bash njujunuunu
+#!/bin/bash 
 
-# Initialize the database
+# Initialize the database ff
 python init_db.py
 
 # Start the application
