@@ -14,8 +14,13 @@ services:
         fromDatabase:
           name: sequoalpha-db
           property: connectionString
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_DEBUG
+        value: false
 
 databases:
   - name: sequoalpha-db
     databaseName: sequoalpha
     user: sequoalpha_user
+    plan: free

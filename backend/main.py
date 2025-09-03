@@ -23,25 +23,57 @@ CORS(app, resources={
 
 # Database configuration
 import os
-DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///sequoalpha.db')
-print(f"🔍 DATABASE_URL: {DATABASE_URL}")
 
+# Get database URL from environment variable
+DATABASE_URL = os.getenv('DATABASE_URL')
+
+if not DATABASE_URL:
+    print("❌ DATABASE_URL environment variable not set!")
+    print("🔧 Using SQLite as fallback...")
+    DATABASE_URL = 'sqlite:///sequoalpha.db'
+else:
+    print(f"🔍 DATABASE_URL from environment: {DATABASE_URL}")
+
+# Fix PostgreSQL URL format for newer versions
 if DATABASE_URL.startswith('postgres://'):
     DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
-    print(f"🔄 Updated DATABASE_URL: {DATABASE_URL}")
+    print(f"🔄 Fixed PostgreSQL URL: {DATABASE_URL}")
 
+# Configure Flask-SQLAlchemy
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-print(f"✅ Final DATABASE_URL: {app.config['SQLALCHEMY_DATABASE_URI']}")
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,
+    'pool_recycle': 300,
+}
+
+print(f"✅ Final database configuration: {app.config['SQLALCHEMY_DATABASE_URI']}")
 
 # Initialize database
 try:
     print("🔧 Initializing database...")
+    print(f"🔧 Database type: {'PostgreSQL' if 'postgresql' in DATABASE_URL else 'SQLite'}")
+    
     db.init_app(app)
+    
+    # Test database connection
+    with app.app_context():
+        db.engine.execute("SELECT 1")
+        print("✅ Database connection test successful!")
+    
     print("✅ Database initialized successfully!")
+    
 except Exception as e:
     print(f"❌ Error initializing database: {e}")
     print(f"❌ DATABASE_URL: {DATABASE_URL}")
+    print(f"❌ Error type: {type(e).__name__}")
+    
+    # If it's a connection error, provide helpful information
+    if "connection" in str(e).lower():
+        print("💡 Connection error detected!")
+        print("💡 Make sure DATABASE_URL is set correctly in Render")
+        print("💡 Check if PostgreSQL service is running")
+    
     raise e
 
 # Security
