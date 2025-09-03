@@ -24,14 +24,25 @@ CORS(app, resources={
 # Database configuration
 import os
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///sequoalpha.db')
+print(f"🔍 DATABASE_URL: {DATABASE_URL}")
+
 if DATABASE_URL.startswith('postgres://'):
     DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+    print(f"🔄 Updated DATABASE_URL: {DATABASE_URL}")
 
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+print(f"✅ Final DATABASE_URL: {app.config['SQLALCHEMY_DATABASE_URI']}")
 
 # Initialize database
-db.init_app(app)
+try:
+    print("🔧 Initializing database...")
+    db.init_app(app)
+    print("✅ Database initialized successfully!")
+except Exception as e:
+    print(f"❌ Error initializing database: {e}")
+    print(f"❌ DATABASE_URL: {DATABASE_URL}")
+    raise e
 
 # Security
 SECRET_KEY = os.getenv("SECRET_KEY", "sequoalpha-secret-key-change-in-production")
