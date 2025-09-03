@@ -2,8 +2,9 @@ services:
   - type: web
     name: sequoalpha-backend
     env: python
-    buildCommand: cd backend && pip install -r requirements-prod.txt
-    startCommand: cd backend && chmod +x start.sh && ./start.sh
+    rootDir: backend
+    buildCommand: pip install -r requirements-prod.txt
+    startCommand: chmod +x start.sh && ./start.sh
     envVars:
       - key: SECRET_KEY
         generateValue: true
