@@ -211,22 +211,7 @@ def read_users_me():
     
     return jsonify(current_user.to_dict())
 
-@app.route('/dashboard', methods=['GET'])
-def dashboard():
-    auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith('Bearer '):
-        return jsonify({"detail": "Token required"}), 401
-    
-    token = auth_header.split(' ')[1]
-    current_user = get_current_user(token)
-    if not current_user:
-        return jsonify({"detail": "Invalid token"}), 401
-    
-    return jsonify({
-        "message": "Welcome to SequoAlpha Management Dashboard",
-        "user": current_user.username,
-        "timestamp": datetime.utcnow().isoformat()
-    })
+
 
 # Document management endpoints
 @app.route('/admin/documents', methods=['GET'])
