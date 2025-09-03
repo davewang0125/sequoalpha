@@ -31,7 +31,7 @@ window.onload = async () => {
 
   document.getElementById('call-api').onclick = async () => {
     const token = await auth0.getTokenSilently();
-    const response = await fetch('https://your-flask-api.com/protected', {
+    const response = await fetch('https://sequoalpha.onrender.com/', {
       headers: { Authorization: `Bearer ${token}` }
     });
     const data = await response.json();
