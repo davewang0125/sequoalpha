@@ -417,3 +417,29 @@ body {
   opacity: 1;
   text-align: left;
 }
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .header {
+    padding: 0 20px !important;
+  }
+  
+  .v1_27 {
+    width: 180px !important;
+    height: 40px !important;
+  }
+  
+  .login-btn {
+    padding: 10px 20px !important;
+    font-size: 12px !important;
+  }
+  
+  .v1_22 {
+    width: 90% !important;
+    left: 5% !important;
+  }
+  
+  .v1_26 {
+    font-size: 28px !important;
+  }
+}

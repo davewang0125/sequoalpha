@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SequoAlpha Management - Secure Login</title>
+    <title>SequoAlpha Management LLC</title>
     <link rel="icon" type="image/png" href="./favicon64.png" />
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- React and ReactDOM CDN -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -17,27 +18,166 @@
     <!-- Configuration -->
     <script src="./frontend/js/config.js"></script>
     
-                <!-- CSS Files -->
-            <link rel="stylesheet" href="./frontend/js/App.css">
-            <link rel="stylesheet" href="./frontend/js/Login.css">
-            <link rel="stylesheet" href="./frontend/js/Dashboard.css">
-            <link rel="stylesheet" href="./frontend/js/UserDashboard.css">
-            <link rel="stylesheet" href="./frontend/js/DocumentCenter.css">
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="./css/main.css">
+    <link rel="stylesheet" href="./css/landing.css">
+    <link rel="stylesheet" href="./frontend/js/App.css">
+    <link rel="stylesheet" href="./frontend/js/Login.css">
+    <link rel="stylesheet" href="./frontend/js/Dashboard.css">
+    <link rel="stylesheet" href="./frontend/js/UserDashboard.css">
+    <link rel="stylesheet" href="./frontend/js/DocumentCenter.css">
 </head>
 <body>
     <div id="root"></div>
 
-                <!-- Main App Component -->
-            <script type="text/babel" src="./frontend/js/App.js"></script>
-            <script type="text/babel" src="./frontend/js/Login.js"></script>
-            <script type="text/babel" src="./frontend/js/Dashboard.js"></script>
-            <script type="text/babel" src="./frontend/js/UserDashboard.js"></script>
-            <script type="text/babel" src="./frontend/js/DocumentCenter.js"></script>
+    <!-- Main App Component -->
+    <script type="text/babel" src="./frontend/js/App.js"></script>
+    <script type="text/babel" src="./frontend/js/Login.js"></script>
+    <script type="text/babel" src="./frontend/js/Dashboard.js"></script>
+    <script type="text/babel" src="./frontend/js/UserDashboard.js"></script>
+    <script type="text/babel" src="./frontend/js/DocumentCenter.js"></script>
     
-    <!-- Render the App -->
+    <!-- Landing Page Component -->
     <script type="text/babel">
+        const LandingPage = ({ onShowLogin }) => {
+            return (
+                <div className="landing-page">
+                    {/* Header with logo and login button */}
+                    <div className="header">
+                        <div className="logo"></div>
+                        <button className="login-btn" onClick={onShowLogin}>
+                            🔐 Login
+                        </button>
+                    </div>
+                    
+                    {/* Main background image with info overlay */}
+                    <div className="hero-section">
+                        <div className="hero-info-overlay">
+                            <h1 className="hero-title">Welcome to SequoAlpha</h1>
+                            <p className="hero-subtitle">Professional Management Solutions</p>
+                            <div className="hero-info">
+                                <div className="info-item">
+                                    <h3>About Us</h3>
+                                    <p>Learn more about SequoAlpha Management LLC and our comprehensive services.</p>
+                                </div>
+                                <div className="info-item">
+                                    <h3>Services</h3>
+                                    <p>Professional management solutions tailored to your business needs.</p>
+                                </div>
+                                <div className="info-item">
+                                    <h3>Contact</h3>
+                                    <p>Get in touch with our expert team for personalized assistance.</p>
+                                </div>
+                                <div className="info-item">
+                                    <h3>Support</h3>
+                                    <p>24/7 customer support for all your inquiries and needs.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* Footer */}
+                    <footer className="footer">
+                        <div className="footer-content">
+                            <p>© 2024 SequoAlpha Management LLC. All rights reserved.</p>
+                            <p>Professional management services | Phone: 650-308-9049 | Email: info@sequoalpha.com</p>
+                        </div>
+                    </footer>
+                </div>
+            );
+        };
+    </script>
+    
+    <!-- Main App Logic -->
+    <script type="text/babel">
+        const MainApp = () => {
+            const [currentView, setCurrentView] = React.useState('landing'); // 'landing' or 'app'
+            const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+            const [user, setUser] = React.useState(null);
+            const [appView, setAppView] = React.useState('dashboard'); // 'dashboard' or 'documentCenter'
+
+            React.useEffect(() => {
+                // Check if user is already logged in
+                const token = localStorage.getItem('token');
+                const savedUser = localStorage.getItem('user');
+                
+                if (token && savedUser) {
+                    setIsAuthenticated(true);
+                    setUser(JSON.parse(savedUser));
+                    setCurrentView('app');
+                }
+            }, []);
+
+            const handleShowLogin = () => {
+                setCurrentView('app');
+            };
+
+            const handleLogin = (loginData) => {
+                setIsAuthenticated(true);
+                setUser(loginData);
+                setCurrentView('app');
+            };
+
+            const handleLogout = () => {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                setIsAuthenticated(false);
+                setUser(null);
+                setCurrentView('landing');
+                setAppView('dashboard');
+            };
+
+            const handleOpenDocumentCenter = () => {
+                setAppView('documentCenter');
+            };
+
+            const handleBackToDashboard = () => {
+                setAppView('dashboard');
+            };
+
+            if (currentView === 'landing') {
+                return <LandingPage onShowLogin={handleShowLogin} />;
+            }
+
+            if (currentView === 'app') {
+                if (isAuthenticated) {
+                    if (appView === 'documentCenter') {
+                        return (
+                            <DocumentCenter 
+                                user={user} 
+                                onBack={handleBackToDashboard} 
+                                onLogout={handleLogout}
+                            />
+                        );
+                    } else {
+                        if (user && user.is_admin) {
+                            return (
+                                <Dashboard 
+                                    user={user} 
+                                    onLogout={handleLogout} 
+                                    onOpenDocumentCenter={handleOpenDocumentCenter}
+                                />
+                            );
+                        } else {
+                            return (
+                                <UserDashboard 
+                                    user={user} 
+                                    onLogout={handleLogout}
+                                />
+                            );
+                        }
+                    }
+                } else {
+                    return <Login onLogin={handleLogin} />;
+                }
+            }
+
+            return <LandingPage onShowLogin={handleShowLogin} />;
+        };
+
+        // Render the main app
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        root.render(<MainApp />);
     </script>
 </body>
 </html>
