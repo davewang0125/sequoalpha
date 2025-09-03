@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash njujunuunu
 
 # Initialize the database
 python init_db.py
