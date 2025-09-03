@@ -18,7 +18,7 @@ const App = () => {
 
   const handleLogin = (loginData) => {
     setIsAuthenticated(true);
-    setUser({ username: loginData.username });
+    setUser(loginData);
   };
 
   const handleLogout = () => {
@@ -41,7 +41,13 @@ const App = () => {
     if (currentView === 'documentCenter') {
       return <DocumentCenter token={localStorage.getItem('token')} onBack={handleBackToDashboard} />;
     }
-    return <Dashboard user={user} onLogout={handleLogout} onOpenDocumentCenter={handleOpenDocumentCenter} />;
+    
+    // Show different dashboards based on user type
+    if (user?.is_admin) {
+      return <Dashboard user={user} onLogout={handleLogout} onOpenDocumentCenter={handleOpenDocumentCenter} />;
+    } else {
+      return <UserDashboard user={user} onLogout={handleLogout} />;
+    }
   }
 
   return (

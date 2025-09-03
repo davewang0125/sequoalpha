@@ -1,174 +1,82 @@
-# SequoAlpha Management LLC
+# 🚀 SequoAlpha Management System
 
-A secure authentication system with FastAPI backend and React frontend for SequoAlpha Management LLC.
+Sistema de gestión de documentos y usuarios para SequoAlpha Management LLC.
 
-## 🚀 Features
+## 📋 Características
 
-- **FastAPI Backend**: Modern, fast Python web framework
-- **JWT Authentication**: Secure token-based authentication
-- **React Frontend**: Modern, responsive user interface
-- **Login Only**: Secure login system (no public registration)
-- **Admin User Management**: Only admins can create new users
-- **Simple Dashboard**: Basic dashboard for authenticated users
-- **Responsive Design**: Works on desktop and mobile devices
+- ✅ **Autenticación segura** con JWT
+- ✅ **Gestión de usuarios** (Admin puede crear usuarios)
+- ✅ **Centro de documentos** con upload de PDFs y links externos
+- ✅ **Base de datos persistente** (SQLite en desarrollo, PostgreSQL en producción)
+- ✅ **Interfaz moderna** con React
+- ✅ **Responsive design** para móviles y desktop
 
-## 📁 Project Structure
+## 🏗️ Arquitectura
+
+```
+Frontend (Netlify) ←→ Backend (Render) ←→ PostgreSQL (Render)
+```
+
+## 🚀 Despliegue Automático
+
+### Para desarrollo local:
+```bash
+# Backend
+cd backend
+python main.py
+
+# Frontend
+python -m http.server 8080
+```
+
+### Para producción:
+El sistema está configurado para despliegue automático en:
+- **Frontend**: Netlify
+- **Backend**: Render con PostgreSQL
+
+Ver [RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md) para instrucciones detalladas.
+
+## 🔐 Credenciales por Defecto
+
+- **Admin**: `admin` / `admin123`
+- **Usuario**: `user` / `user123`
+
+## 📁 Estructura del Proyecto
 
 ```
 sequoalpha/
-├── backend/
-│   ├── main.py              # FastAPI application
-│   └── requirements.txt     # Python dependencies
-├── frontend/
+├── backend/                 # Backend Flask
+│   ├── main.py             # Aplicación principal
+│   ├── models.py           # Modelos de base de datos
+│   ├── init_db.py          # Inicialización de datos
+│   ├── start.sh            # Script de inicio para Render
+│   ├── requirements.txt    # Dependencias de desarrollo
+│   ├── requirements-prod.txt # Dependencias de producción
+│   └── render.yaml         # Configuración de Render
+├── frontend/               # Frontend React
 │   └── js/
-│       ├── App.js          # Main React component
-│       ├── Login.js        # Login component
-│       ├── Dashboard.js    # Dashboard component
-│       ├── App.css         # App styles
-│       ├── Login.css       # Login styles
-│       └── Dashboard.css   # Dashboard styles
-├── index.html              # Main login page
-├── images/                 # Background images
-├── css/                    # Additional styles
-└── README.md               # This file
+│       ├── App.js          # Componente principal
+│       ├── Login.js        # Componente de login
+│       ├── Dashboard.js    # Dashboard principal
+│       ├── DocumentCenter.js # Centro de documentos
+│       └── config.js       # Configuración de URLs
+├── index.html              # Página principal
+└── README.md               # Este archivo
 ```
 
-## 🛠️ Installation & Setup
+## 🛠️ Tecnologías
 
-### Backend Setup
+- **Backend**: Flask, SQLAlchemy, JWT, bcrypt
+- **Frontend**: React, HTML5, CSS3
+- **Base de datos**: SQLite (desarrollo), PostgreSQL (producción)
+- **Despliegue**: Render, Netlify
 
-1. **Navigate to the backend directory:**
-   ```bash
-   cd sequoalpha/backend
-   ```
+## 📞 Contacto
 
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Run the FastAPI server:**
-   ```bash
-   python main.py
-   ```
-
-   The API will be available at: http://localhost:8000
-
-### Frontend Setup
-
-1. **Open the main page:**
-   - Simply open `index.html` in your web browser
-   - Or serve it with a local server:
-     ```bash
-     python -m http.server 3000
-     ```
-     Then visit: http://localhost:3000
-
-## 🔧 API Endpoints
-
-### Authentication
-- `POST /login` - Login user
-- `GET /users/me` - Get current user info (protected)
-
-### Admin Routes (Admin Only)
-- `POST /admin/create-user` - Create new user (admin only)
-
-### Dashboard
-- `GET /dashboard` - Access dashboard data (protected)
-
-## 🔑 Default Admin Credentials
-
-The system creates a default admin user:
-- **Username**: `admin`
-- **Password**: `admin123`
-
-**⚠️ IMPORTANT**: Change these credentials in production!
-
-## 🎯 Usage
-
-1. **Start the backend server** (see Backend Setup above)
-2. **Open the frontend** in your browser
-3. **Login** with admin credentials or user credentials provided by admin
-4. **Access the dashboard** with your authenticated session
-
-### Creating New Users (Admin Only)
-
-Only admin users can create new users. Use the admin endpoint:
-
-```bash
-curl -X POST "http://localhost:8000/admin/create-user" \
-  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "newuser",
-    "email": "user@example.com",
-    "password": "securepassword",
-    "full_name": "New User"
-  }'
-```
-
-## 🔒 Security Features
-
-- **JWT Tokens**: Secure authentication tokens
-- **Password Hashing**: Bcrypt password encryption
-- **Admin-Only User Creation**: No public registration
-- **CORS Protection**: Cross-origin resource sharing configuration
-- **Input Validation**: Pydantic model validation
-- **Error Handling**: Comprehensive error responses
-
-## 🎨 Frontend Features
-
-- **Modern UI**: Clean, professional design matching SequoAlpha branding
-- **Responsive**: Works on all device sizes
-- **Form Validation**: Client-side validation
-- **Loading States**: User feedback during operations
-- **Error Handling**: Clear error messages
-- **Background Integration**: Uses same background as main site
-
-## 🚀 Development
-
-### Adding New Features
-
-1. **Backend**: Add new endpoints in `main.py`
-2. **Frontend**: Create new React components in `frontend/js/`
-3. **Styling**: Add CSS in the appropriate component file
-
-### Database Integration
-
-The current implementation uses an in-memory database. To integrate with a real database:
-
-1. Add database dependencies to `requirements.txt`
-2. Replace the `users_db` dictionary with database models
-3. Update the authentication functions to use the database
-
-## 📝 Environment Variables
-
-Create a `.env` file in the backend directory:
-
-```env
-SECRET_KEY=your-super-secret-key-change-this-in-production
-```
-
-## 🔧 Troubleshooting
-
-### Common Issues
-
-1. **CORS Errors**: Ensure the backend is running on the correct port
-2. **Module Not Found**: Make sure all dependencies are installed
-3. **Port Already in Use**: Change the port in `main.py` or kill the existing process
-
-### Getting Help
-
-- Check the browser console for frontend errors
-- Check the terminal for backend errors
-- Ensure both frontend and backend are running
-
-## 📄 License
-
-This project is for SequoAlpha Management LLC internal use.
-
-## 📞 Contact
-
-- **Address**: 319 N Bernardo Ave, Mountainview, CA 94043
-- **Phone**: 650-308-9049
+- **Dirección**: 319 N Bernardo Ave, Mountainview, CA 94043
+- **Teléfono**: 650-308-9049
 - **Email**: info@sequoalpha.com
+
+## 📄 Licencia
+
+© 2025 SequoAlpha Management LP. All rights reserved.
