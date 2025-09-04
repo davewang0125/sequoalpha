@@ -1,6 +1,7 @@
 
-
 const App = () => {
+  console.log('🚀 App component is rendering');
+  
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const [user, setUser] = React.useState(null);
   const [currentView, setCurrentView] = React.useState('dashboard'); // 'dashboard' or 'documentCenter'
