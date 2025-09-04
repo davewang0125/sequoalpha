@@ -128,6 +128,12 @@ def get_current_admin(token):
         return None
     return user
 
+@app.route('/test-cors', methods=['GET', 'OPTIONS'])
+def test_cors():
+    if request.method == 'OPTIONS':
+        return '', 200
+    return jsonify({"message": "CORS is working!", "origin": request.headers.get('Origin')})
+
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
