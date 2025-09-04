@@ -39,7 +39,13 @@ const App = () => {
 
   if (isAuthenticated) {
     if (currentView === 'documentCenter') {
-      return <DocumentCenter token={localStorage.getItem('token')} onBack={handleBackToDashboard} />;
+      const token = localStorage.getItem('token');
+      if (!token) {
+        // If no token, redirect to login
+        handleLogout();
+        return null;
+      }
+      return <DocumentCenter token={token} onBack={handleBackToDashboard} />;
     }
     
     // Show different dashboards based on user type
