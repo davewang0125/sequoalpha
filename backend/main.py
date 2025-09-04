@@ -112,14 +112,20 @@ def get_current_user(token):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
+        print(f"🔍 Token payload: {payload}")
+        print(f"👤 Username from token: {username}")
         if username is None:
             return None
     except jwt.InvalidTokenError:
+        print("❌ Invalid token")
         return None
     
     user = User.query.filter_by(username=username).first()
+    print(f"👤 User from DB: {user}")
     if user is None:
         return None
+    if user:
+        print(f"👤 User is_admin: {user.is_admin}")
     return user
 
 def get_current_admin(token):
@@ -332,7 +338,9 @@ def upload_document():
         return jsonify({"detail": "Admin token required"}), 401
     
     token = auth_header.split(' ')[1]
+    print(f"🔑 Upload token: {token}")
     current_admin = get_current_admin(token)
+    print(f"👤 Current admin: {current_admin}")
     if not current_admin:
         return jsonify({"detail": "Admin privileges required"}), 403
     
