@@ -40,7 +40,9 @@ const App = () => {
   if (isAuthenticated) {
     if (currentView === 'documentCenter') {
       const token = localStorage.getItem('token');
+      console.log('🔑 Token from localStorage:', token);
       if (!token) {
+        console.log('❌ No token found, redirecting to login');
         // If no token, redirect to login
         handleLogout();
         return null;
