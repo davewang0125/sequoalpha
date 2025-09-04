@@ -41,7 +41,7 @@ const UserDashboard = ({ user, onLogout }) => {
   const handleDownload = async (document) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${window.API_BASE_URL}/admin/documents/${document.id}/download`, {
+      const response = await fetch(`${window.API_BASE_URL}/documents/${document.id}/download`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

@@ -501,6 +501,37 @@ def download_document_by_id(document_id):
         print(f"Download error: {str(e)}")
         return jsonify({"detail": "Download failed"}), 500
 
+@app.route('/documents/<int:document_id>/download', methods=['GET'])
+def download_document_user(document_id):
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({"detail": "Token required"}), 401
+        
+        token = auth_header.split(' ')[1]
+        current_user = get_current_user(token)
+        if not current_user:
+            return jsonify({"detail": "Invalid token"}), 401
+        
+        # Get document from database
+        document = Document.query.get(document_id)
+        if not document:
+            return jsonify({"detail": "Document not found"}), 404
+        
+        if not document.filename:
+            return jsonify({"detail": "No file associated with this document"}), 400
+        
+        # Check if file exists
+        file_path = os.path.join(UPLOAD_FOLDER, document.filename)
+        if not os.path.exists(file_path):
+            return jsonify({"detail": "File not found on server"}), 404
+        
+        print(f"📥 User {current_user.username} downloading document: {document.filename}")
+        return send_from_directory(UPLOAD_FOLDER, document.filename, as_attachment=True)
+    except Exception as e:
+        print(f"Error downloading document: {e}")
+        return jsonify({"detail": "Error downloading document"}), 500
+
 @app.route('/documents/<filename>', methods=['GET'])
 def download_document(filename):
     auth_header = request.headers.get('Authorization')
