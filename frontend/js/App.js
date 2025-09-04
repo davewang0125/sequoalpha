@@ -10,9 +10,15 @@ const App = () => {
     const token = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
     
+    console.log('🔍 App useEffect - token:', token);
+    console.log('🔍 App useEffect - savedUser:', savedUser);
+    
     if (token && savedUser) {
+      console.log('✅ User is authenticated');
       setIsAuthenticated(true);
       setUser(JSON.parse(savedUser));
+    } else {
+      console.log('❌ User is not authenticated');
     }
   }, []);
 
@@ -37,6 +43,10 @@ const App = () => {
     setCurrentView('dashboard');
   };
 
+  console.log('🔍 isAuthenticated:', isAuthenticated);
+  console.log('🔍 currentView:', currentView);
+  console.log('🔍 user:', user);
+  
   if (isAuthenticated) {
     if (currentView === 'documentCenter') {
       const token = localStorage.getItem('token');
