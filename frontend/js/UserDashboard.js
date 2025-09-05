@@ -40,15 +40,24 @@ const UserDashboard = ({ user, onLogout }) => {
 
   const handleDownload = async (document) => {
     try {
+      console.log('🔍 UserDashboard handleDownload called with:', document);
       const token = localStorage.getItem('token');
+      console.log('🔑 UserDashboard token:', token ? `${token.substring(0, 20)}...` : 'No token');
+      console.log('🌍 UserDashboard API URL:', window.API_BASE_URL);
+      console.log('📥 UserDashboard download URL:', `${window.API_BASE_URL}/documents/${document.id}/download`);
+      
       const response = await fetch(`${window.API_BASE_URL}/documents/${document.id}/download`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
+      console.log('📥 UserDashboard response status:', response.status);
+      console.log('📥 UserDashboard response headers:', response.headers);
+
       if (!response.ok) {
         const errorText = await response.text();
+        console.log('❌ UserDashboard error response:', errorText);
         throw new Error(`Download failed ${response.status}: ${errorText}`);
       }
 
