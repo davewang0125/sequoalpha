@@ -543,6 +543,8 @@ def download_document_user(document_id):
             
             # Create a temporary PDF file
             try:
+                # Create a more robust PDF content
+                title_text = document.title.replace('(', '\\(').replace(')', '\\)')
                 pdf_content = f"""%PDF-1.4
 1 0 obj
 <<
@@ -565,18 +567,31 @@ endobj
 /Parent 2 0 R
 /MediaBox [0 0 612 792]
 /Contents 4 0 R
+/Resources <<
+/Font <<
+/F1 <<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+>>
+>>
+>>
 >>
 endobj
 
 4 0 obj
 <<
-/Length 44
+/Length 100
 >>
 stream
 BT
 /F1 12 Tf
 72 720 Td
-(Temporary file for {document.title}) Tj
+({title_text}) Tj
+0 -20 Td
+(This is a temporary file) Tj
+0 -20 Td
+(Created on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}) Tj
 ET
 endstream
 endobj
@@ -594,7 +609,7 @@ trailer
 /Root 1 0 R
 >>
 startxref
-297
+400
 %%EOF"""
                 
                 with open(file_path, 'w', encoding='utf-8') as f:
