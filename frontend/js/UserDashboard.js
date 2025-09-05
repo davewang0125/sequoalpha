@@ -61,15 +61,26 @@ const UserDashboard = ({ user, onLogout }) => {
         throw new Error(`Download failed ${response.status}: ${errorText}`);
       }
 
+      console.log('📥 UserDashboard processing blob...');
       const blob = await response.blob();
+      console.log('📥 UserDashboard blob created:', blob.size, 'bytes');
+      
       const url = window.URL.createObjectURL(blob);
+      console.log('📥 UserDashboard object URL created:', url);
+      
       const a = document.createElement('a');
       a.href = url;
       a.download = document.filename || `${document.title}.pdf`;
+      console.log('📥 UserDashboard download filename:', a.download);
+      
       document.body.appendChild(a);
+      console.log('📥 UserDashboard triggering click...');
       a.click();
+      console.log('📥 UserDashboard click triggered');
+      
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+      console.log('📥 UserDashboard download completed');
     } catch (err) {
       setError('Error downloading document: ' + err.message);
     }

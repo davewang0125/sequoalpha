@@ -616,6 +616,9 @@ startxref
             download_name=document.filename
         )
         
+        print(f"📥 Response created, content-type: {response.content_type}")
+        print(f"📥 Response headers: {dict(response.headers)}")
+        
         # Add CORS headers
         response.headers['Access-Control-Allow-Origin'] = '*'
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
