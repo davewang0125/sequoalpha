@@ -38,15 +38,15 @@ const UserDashboard = ({ user, onLogout }) => {
     onLogout();
   };
 
-  const handleDownload = async (document) => {
+  const handleDownload = async (doc) => {
     try {
-      console.log('🔍 UserDashboard handleDownload called with:', document);
+      console.log('🔍 UserDashboard handleDownload called with:', doc);
       const token = localStorage.getItem('token');
       console.log('🔑 UserDashboard token:', token ? `${token.substring(0, 20)}...` : 'No token');
       console.log('🌍 UserDashboard API URL:', window.API_BASE_URL);
-      console.log('📥 UserDashboard download URL:', `${window.API_BASE_URL}/documents/${document.id}/download`);
+      console.log('📥 UserDashboard download URL:', `${window.API_BASE_URL}/documents/${doc.id}/download`);
       
-      const response = await fetch(`${window.API_BASE_URL}/documents/${document.id}/download`, {
+      const response = await fetch(`${window.API_BASE_URL}/documents/${doc.id}/download`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -70,7 +70,7 @@ const UserDashboard = ({ user, onLogout }) => {
       
       const a = document.createElement('a');
       a.href = url;
-      a.download = document.filename || `${document.title}.pdf`;
+      a.download = doc.filename || `${doc.title}.pdf`;
       console.log('📥 UserDashboard download filename:', a.download);
       
       document.body.appendChild(a);
