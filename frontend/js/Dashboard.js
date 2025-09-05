@@ -185,7 +185,7 @@ const Dashboard = ({ user, onLogout, onOpenDocumentCenter }) => {
             </div>
             <form onSubmit={handleChangePassword} className="modal-form">
               <div className="form-group">
-                <label>Username:</label>
+                <label>Username (to change password):</label>
                 <input
                   type="text"
                   value={passwordData.username}
