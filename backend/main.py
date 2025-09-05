@@ -602,6 +602,82 @@ def get_documents_user():
         print(f"Error getting documents for user: {e}")
         return jsonify({"detail": "Error retrieving documents"}), 500
 
+@app.route('/debug/files', methods=['GET'])
+def debug_files():
+    """Debug endpoint to list files in uploads directory"""
+    try:
+        upload_dir = app.config['UPLOAD_FOLDER']
+        print(f"📁 Upload directory: {upload_dir}")
+        
+        if not os.path.exists(upload_dir):
+            return jsonify({"error": f"Upload directory does not exist: {upload_dir}"}), 404
+        
+        files = os.listdir(upload_dir)
+        file_info = []
+        
+        for filename in files:
+            file_path = os.path.join(upload_dir, filename)
+            if os.path.isfile(file_path):
+                file_size = os.path.getsize(file_path)
+                file_info.append({
+                    "filename": filename,
+                    "size": file_size,
+                    "path": file_path
+                })
+        
+        return jsonify({
+            "upload_directory": upload_dir,
+            "files": file_info,
+            "total_files": len(file_info)
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/debug/cleanup-orphaned', methods=['POST'])
+def cleanup_orphaned_documents():
+    """Clean up documents that exist in DB but have no physical file"""
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({"detail": "Token required"}), 401
+        
+        token = auth_header.split(' ')[1]
+        current_user = get_current_user(token)
+        if not current_user or not current_user.is_admin:
+            return jsonify({"detail": "Admin privileges required"}), 403
+        
+        upload_dir = app.config['UPLOAD_FOLDER']
+        orphaned_docs = []
+        cleaned_docs = []
+        
+        # Get all documents from DB
+        documents = Document.query.all()
+        
+        for doc in documents:
+            if doc.filename:  # Only check documents with filenames
+                file_path = os.path.join(upload_dir, doc.filename)
+                if not os.path.exists(file_path):
+                    orphaned_docs.append({
+                        "id": doc.id,
+                        "title": doc.title,
+                        "filename": doc.filename
+                    })
+                    # Optionally delete from DB
+                    # db.session.delete(doc)
+                    # cleaned_docs.append(doc.id)
+        
+        # db.session.commit()
+        
+        return jsonify({
+            "orphaned_documents": orphaned_docs,
+            "cleaned_documents": cleaned_docs,
+            "total_orphaned": len(orphaned_docs)
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/', methods=['GET'])
 def root():
     return jsonify({"message": "SequoAlpha Management API - Secure Access Only"})
