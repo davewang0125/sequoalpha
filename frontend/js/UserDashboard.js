@@ -47,21 +47,22 @@ const UserDashboard = ({ user, onLogout }) => {
         }
       });
 
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = document.filename || `${document.title}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      } else {
-        setError('Failed to download document');
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Download failed ${response.status}: ${errorText}`);
       }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = document.filename || `${document.title}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
     } catch (err) {
-      setError('Network error during download');
+      setError('Error downloading document: ' + err.message);
     }
   };
 

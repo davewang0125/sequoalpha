@@ -81,8 +81,9 @@ SECRET_KEY = os.getenv("SECRET_KEY", "sequoalpha-secret-key-change-in-production
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-# File upload configuration
-UPLOAD_FOLDER = 'uploads'
+# File upload configuration - Use absolute path
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 ALLOWED_EXTENSIONS = {'pdf'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
@@ -574,6 +575,32 @@ def download_document(filename):
         return jsonify({"detail": "Invalid token"}), 401
     
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+@app.route('/documents', methods=['GET'])
+def get_documents_user():
+    """Get all documents for regular users"""
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({"detail": "Token required"}), 401
+        
+        token = auth_header.split(' ')[1]
+        current_user = get_current_user(token)
+        if not current_user:
+            return jsonify({"detail": "Invalid token"}), 401
+        
+        print(f"📄 User {current_user.username} requesting documents list")
+        
+        # Get all documents
+        documents = Document.query.all()
+        documents_data = [doc.to_dict() for doc in documents]
+        
+        print(f"📄 Found {len(documents_data)} documents for user")
+        return jsonify(documents_data)
+        
+    except Exception as e:
+        print(f"Error getting documents for user: {e}")
+        return jsonify({"detail": "Error retrieving documents"}), 500
 
 @app.route('/', methods=['GET'])
 def root():
