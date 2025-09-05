@@ -504,30 +504,60 @@ def download_document_by_id(document_id):
 @app.route('/documents/<int:document_id>/download', methods=['GET'])
 def download_document_user(document_id):
     try:
+        print(f"📥 User download request for document ID: {document_id}")
+        
         auth_header = request.headers.get('Authorization')
         if not auth_header or not auth_header.startswith('Bearer '):
+            print("❌ No valid auth header")
             return jsonify({"detail": "Token required"}), 401
         
         token = auth_header.split(' ')[1]
+        print(f"🔑 User download token: {token[:20]}...")
+        
         current_user = get_current_user(token)
         if not current_user:
+            print("❌ Invalid user token")
             return jsonify({"detail": "Invalid token"}), 401
+        
+        print(f"👤 User downloading: {current_user.username}")
         
         # Get document from database
         document = Document.query.get(document_id)
         if not document:
+            print(f"❌ Document with ID {document_id} not found in database")
             return jsonify({"detail": "Document not found"}), 404
         
+        print(f"📄 Document found: {document.title}, filename: {document.filename}")
+        
         if not document.filename:
+            print("❌ Document has no filename")
             return jsonify({"detail": "No file associated with this document"}), 400
         
         # Check if file exists
-        file_path = os.path.join(UPLOAD_FOLDER, document.filename)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], document.filename)
+        print(f"📁 Checking file path: {file_path}")
         if not os.path.exists(file_path):
+            print(f"❌ File not found at: {file_path}")
             return jsonify({"detail": "File not found on server"}), 404
         
+        print(f"✅ File exists, proceeding with download")
+        
         print(f"📥 User {current_user.username} downloading document: {document.filename}")
-        return send_from_directory(UPLOAD_FOLDER, document.filename, as_attachment=True)
+        
+        # Set proper headers for file download
+        response = send_from_directory(
+            app.config['UPLOAD_FOLDER'], 
+            document.filename, 
+            as_attachment=True,
+            download_name=document.filename
+        )
+        
+        # Add CORS headers
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        
+        return response
     except Exception as e:
         print(f"Error downloading document: {e}")
         return jsonify({"detail": "Error downloading document"}), 500
