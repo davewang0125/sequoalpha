@@ -23,6 +23,7 @@ const Login = ({ onLogin }) => {
       const data = await response.json();
 
       if (response.ok) {
+        console.log('🔑 Login successful, token:', data.access_token);
         localStorage.setItem('token', data.access_token);
         
         // Get user info with the token
