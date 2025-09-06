@@ -142,11 +142,11 @@
             if (currentView === 'app') {
                 if (isAuthenticated) {
                     if (appView === 'documentCenter') {
+                        const token = localStorage.getItem('token');
                         return (
                             <DocumentCenter 
-                                user={user} 
+                                token={token}
                                 onBack={handleBackToDashboard} 
-                                onLogout={handleLogout}
                             />
                         );
                     } else {
