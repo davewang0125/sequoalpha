@@ -865,5 +865,11 @@ def root():
     return jsonify({"message": "SequoAlpha Management API - Secure Access Only"})
 
 if __name__ == '__main__':
+    # Initialize database and create sample files
+    with app.app_context():
+        from init_db import init_database
+        init_database()
+        print("✅ Database initialized and sample files created")
+    
     port = int(os.environ.get('PORT', 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
