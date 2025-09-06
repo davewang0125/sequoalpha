@@ -14,7 +14,7 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app, resources={
     r"/*": {
-        "origins": ["http://localhost:8080", "http://localhost:3000", "https://your-netlify-domain.netlify.app"],
+        "origins": ["http://localhost:8080", "http://localhost:3000", "https://sequopreview.netlify.app", "https://*.netlify.app"],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
         "supports_credentials": True
@@ -23,25 +23,72 @@ CORS(app, resources={
 
 # Database configuration
 import os
-DBUSER = os.getenv('DATABASE_USER', '')
-DBPASSWORD = os.getenv('DATABASE_PASSWORD', '')
-HOSTNAME = os.getenv('DATABASE_HOST', '')
-DBNAME = os.getenv('DATABASE_NAME', '')
 
-DATABASE_URL = "postgresql://DBUSER:DBPASSWORD@HOSTNAME/DBNAME"
+# Get database URL from environment variable
+DATABASE_URL = os.getenv('DATABASE_URL')
+
+if not DATABASE_URL:
+    print("❌ DATABASE_URL environment variable not set!")
+    print("🔧 Using SQLite as fallback...")
+    DATABASE_URL = 'sqlite:///sequoalpha.db'
+else:
+    print(f"🔍 DATABASE_URL from environment: {DATABASE_URL}")
+
+# Fix PostgreSQL URL format for newer versions
+if DATABASE_URL.startswith('postgres://'):
+    DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+    print(f"🔄 Fixed PostgreSQL URL: {DATABASE_URL}")
+
+# Configure Flask-SQLAlchemy
+# DBUSER = os.getenv('DATABASE_USER', '')
+# DBPASSWORD = os.getenv('DATABASE_PASSWORD', '')
+# HOSTNAME = os.getenv('DATABASE_HOST', '')
+# DBNAME = os.getenv('DATABASE_NAME', '')
+# DATABASE_URL = "postgresql://DBUSER:DBPASSWORD@HOSTNAME/DBNAME"
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,
+    'pool_recycle': 300,
+}
+
+print(f"✅ Final database configuration: {app.config['SQLALCHEMY_DATABASE_URI']}")
 
 # Initialize database
-db.init_app(app)
+try:
+    print("🔧 Initializing database...")
+    print(f"🔧 Database type: {'PostgreSQL' if 'postgresql' in DATABASE_URL else 'SQLite'}")
+    
+    db.init_app(app)
+    
+    # Test database connection
+    with app.app_context():
+        db.session.execute(db.text("SELECT 1"))
+        print("✅ Database connection test successful!")
+    
+    print("✅ Database initialized successfully!")
+    
+except Exception as e:
+    print(f"❌ Error initializing database: {e}")
+    print(f"❌ DATABASE_URL: {DATABASE_URL}")
+    print(f"❌ Error type: {type(e).__name__}")
+    
+    # If it's a connection error, provide helpful information
+    if "connection" in str(e).lower():
+        print("💡 Connection error detected!")
+        print("💡 Make sure DATABASE_URL is set correctly in Render")
+        print("💡 Check if PostgreSQL service is running")
+    
+    raise e
 
 # Security
 SECRET_KEY = os.getenv("SECRET_KEY", "sequoalpha-secret-key-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-# File upload configuration
-UPLOAD_FOLDER = 'uploads'
+# File upload configuration - Use absolute path
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 ALLOWED_EXTENSIONS = {'pdf'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
@@ -71,14 +118,20 @@ def get_current_user(token):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
+        print(f"🔍 Token payload: {payload}")
+        print(f"👤 Username from token: {username}")
         if username is None:
             return None
     except jwt.InvalidTokenError:
+        print("❌ Invalid token")
         return None
     
     user = User.query.filter_by(username=username).first()
+    print(f"👤 User from DB: {user}")
     if user is None:
         return None
+    if user:
+        print(f"👤 User is_admin: {user.is_admin}")
     return user
 
 def get_current_admin(token):
@@ -86,6 +139,12 @@ def get_current_admin(token):
     if not user or not user.is_admin:
         return None
     return user
+
+@app.route('/test-cors', methods=['GET', 'OPTIONS'])
+def test_cors():
+    if request.method == 'OPTIONS':
+        return '', 200
+    return jsonify({"message": "CORS is working!", "origin": request.headers.get('Origin')})
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -285,7 +344,9 @@ def upload_document():
         return jsonify({"detail": "Admin token required"}), 401
     
     token = auth_header.split(' ')[1]
+    print(f"🔑 Upload token: {token}")
     current_admin = get_current_admin(token)
+    print(f"👤 Current admin: {current_admin}")
     if not current_admin:
         return jsonify({"detail": "Admin privileges required"}), 403
     
@@ -446,6 +507,67 @@ def download_document_by_id(document_id):
         print(f"Download error: {str(e)}")
         return jsonify({"detail": "Download failed"}), 500
 
+@app.route('/documents/<int:document_id>/download', methods=['GET'])
+def download_document_user(document_id):
+    try:
+        print(f"📥 User download request for document ID: {document_id}")
+        
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            print("❌ No valid auth header")
+            return jsonify({"detail": "Token required"}), 401
+        
+        token = auth_header.split(' ')[1]
+        print(f"🔑 User download token: {token[:20]}...")
+        
+        current_user = get_current_user(token)
+        if not current_user:
+            print("❌ Invalid user token")
+            return jsonify({"detail": "Invalid token"}), 401
+        
+        print(f"👤 User downloading: {current_user.username}")
+        
+        # Get document from database
+        document = Document.query.get(document_id)
+        if not document:
+            print(f"❌ Document with ID {document_id} not found in database")
+            return jsonify({"detail": "Document not found"}), 404
+        
+        print(f"📄 Document found: {document.title}, filename: {document.filename}")
+        
+        if not document.filename:
+            print("❌ Document has no filename")
+            return jsonify({"detail": "No file associated with this document"}), 400
+        
+        # Check if file exists
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], document.filename)
+        print(f"📁 Checking file path: {file_path}")
+        if not os.path.exists(file_path):
+            print(f"❌ File not found at: {file_path}")
+            return jsonify({"detail": "File not found on server"}), 404
+        
+        print(f"✅ File exists, proceeding with download")
+        
+        print(f"📥 User {current_user.username} downloading document: {document.filename}")
+        
+        # Set proper headers for file download
+        response = send_from_directory(
+            app.config['UPLOAD_FOLDER'], 
+            document.filename, 
+            as_attachment=True,
+            download_name=document.filename
+        )
+        
+        # Add CORS headers
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        
+        return response
+    except Exception as e:
+        print(f"Error downloading document: {e}")
+        return jsonify({"detail": "Error downloading document"}), 500
+
 @app.route('/documents/<filename>', methods=['GET'])
 def download_document(filename):
     auth_header = request.headers.get('Authorization')
@@ -458,6 +580,108 @@ def download_document(filename):
         return jsonify({"detail": "Invalid token"}), 401
     
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+@app.route('/documents', methods=['GET'])
+def get_documents_user():
+    """Get all documents for regular users"""
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({"detail": "Token required"}), 401
+        
+        token = auth_header.split(' ')[1]
+        current_user = get_current_user(token)
+        if not current_user:
+            return jsonify({"detail": "Invalid token"}), 401
+        
+        print(f"📄 User {current_user.username} requesting documents list")
+        
+        # Get all documents
+        documents = Document.query.all()
+        documents_data = [doc.to_dict() for doc in documents]
+        
+        print(f"📄 Found {len(documents_data)} documents for user")
+        return jsonify(documents_data)
+        
+    except Exception as e:
+        print(f"Error getting documents for user: {e}")
+        return jsonify({"detail": "Error retrieving documents"}), 500
+
+@app.route('/debug/files', methods=['GET'])
+def debug_files():
+    """Debug endpoint to list files in uploads directory"""
+    try:
+        upload_dir = app.config['UPLOAD_FOLDER']
+        print(f"📁 Upload directory: {upload_dir}")
+        
+        if not os.path.exists(upload_dir):
+            return jsonify({"error": f"Upload directory does not exist: {upload_dir}"}), 404
+        
+        files = os.listdir(upload_dir)
+        file_info = []
+        
+        for filename in files:
+            file_path = os.path.join(upload_dir, filename)
+            if os.path.isfile(file_path):
+                file_size = os.path.getsize(file_path)
+                file_info.append({
+                    "filename": filename,
+                    "size": file_size,
+                    "path": file_path
+                })
+        
+        return jsonify({
+            "upload_directory": upload_dir,
+            "files": file_info,
+            "total_files": len(file_info)
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/debug/cleanup-orphaned', methods=['POST'])
+def cleanup_orphaned_documents():
+    """Clean up documents that exist in DB but have no physical file"""
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({"detail": "Token required"}), 401
+        
+        token = auth_header.split(' ')[1]
+        current_user = get_current_user(token)
+        if not current_user or not current_user.is_admin:
+            return jsonify({"detail": "Admin privileges required"}), 403
+        
+        upload_dir = app.config['UPLOAD_FOLDER']
+        orphaned_docs = []
+        cleaned_docs = []
+        
+        # Get all documents from DB
+        documents = Document.query.all()
+        
+        for doc in documents:
+            if doc.filename:  # Only check documents with filenames
+                file_path = os.path.join(upload_dir, doc.filename)
+                if not os.path.exists(file_path):
+                    orphaned_docs.append({
+                        "id": doc.id,
+                        "title": doc.title,
+                        "filename": doc.filename
+                    })
+                    # Optionally delete from DB
+                    # db.session.delete(doc)
+                    # cleaned_docs.append(doc.id)
+        
+        # db.session.commit()
+        
+        return jsonify({
+            "orphaned_documents": orphaned_docs,
+            "cleaned_documents": cleaned_docs,
+            "total_orphaned": len(orphaned_docs)
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/', methods=['GET'])
 def root():

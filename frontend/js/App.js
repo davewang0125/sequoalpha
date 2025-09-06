@@ -1,6 +1,7 @@
 
-
 const App = () => {
+  console.log('🚀 App component is rendering');
+  
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const [user, setUser] = React.useState(null);
   const [currentView, setCurrentView] = React.useState('dashboard'); // 'dashboard' or 'documentCenter'
@@ -10,9 +11,15 @@ const App = () => {
     const token = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
     
+    console.log('🔍 App useEffect - token:', token);
+    console.log('🔍 App useEffect - savedUser:', savedUser);
+    
     if (token && savedUser) {
+      console.log('✅ User is authenticated');
       setIsAuthenticated(true);
       setUser(JSON.parse(savedUser));
+    } else {
+      console.log('❌ User is not authenticated');
     }
   }, []);
 
@@ -37,9 +44,21 @@ const App = () => {
     setCurrentView('dashboard');
   };
 
+  console.log('🔍 isAuthenticated:', isAuthenticated);
+  console.log('🔍 currentView:', currentView);
+  console.log('🔍 user:', user);
+  
   if (isAuthenticated) {
     if (currentView === 'documentCenter') {
-      return <DocumentCenter token={localStorage.getItem('token')} onBack={handleBackToDashboard} />;
+      const token = localStorage.getItem('token');
+      console.log('🔑 Token from localStorage:', token);
+      if (!token) {
+        console.log('❌ No token found, redirecting to login');
+        // If no token, redirect to login
+        handleLogout();
+        return null;
+      }
+      return <DocumentCenter token={token} onBack={handleBackToDashboard} />;
     }
     
     // Show different dashboards based on user type
