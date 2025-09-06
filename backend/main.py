@@ -40,6 +40,11 @@ if DATABASE_URL.startswith('postgres://'):
     print(f"🔄 Fixed PostgreSQL URL: {DATABASE_URL}")
 
 # Configure Flask-SQLAlchemy
+# DBUSER = os.getenv('DATABASE_USER', '')
+# DBPASSWORD = os.getenv('DATABASE_PASSWORD', '')
+# HOSTNAME = os.getenv('DATABASE_HOST', '')
+# DBNAME = os.getenv('DATABASE_NAME', '')
+# DATABASE_URL = "postgresql://DBUSER:DBPASSWORD@HOSTNAME/DBNAME"
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
