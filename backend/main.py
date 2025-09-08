@@ -559,8 +559,11 @@ def download_document_user(document_id):
             
             # Create a temporary PDF file
             try:
-                # Create a more robust PDF content
-                title_text = document.title.replace('(', '\\(').replace(')', '\\)')
+                # Create a simple, valid PDF content
+                title_text = document.title.replace('(', '').replace(')', '').replace('\\', '')
+                current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                
+                # Simple PDF structure
                 pdf_content = f"""%PDF-1.4
 1 0 obj
 <<
@@ -597,17 +600,22 @@ endobj
 
 4 0 obj
 <<
-/Length 100
+/Length 200
 >>
 stream
 BT
-/F1 12 Tf
+/F1 16 Tf
 72 720 Td
 ({title_text}) Tj
-0 -20 Td
+0 -30 Td
+/F1 12 Tf
 (This is a temporary file) Tj
 0 -20 Td
-(Created on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}) Tj
+(Created on {current_time}) Tj
+0 -20 Td
+(File not found on server) Tj
+0 -20 Td
+(Please contact administrator) Tj
 ET
 endstream
 endobj
@@ -625,11 +633,12 @@ trailer
 /Root 1 0 R
 >>
 startxref
-400
+500
 %%EOF"""
                 
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    f.write(pdf_content)
+                # Write as binary to ensure proper PDF format
+                with open(file_path, 'wb') as f:
+                    f.write(pdf_content.encode('utf-8'))
                 print(f"✅ Created temporary PDF file: {document.filename}")
             except Exception as e:
                 print(f"❌ Failed to create temporary file: {e}")
@@ -801,7 +810,10 @@ def recreate_sample_files():
                 upload_dir = app.config['UPLOAD_FOLDER']
                 file_path = os.path.join(upload_dir, doc.filename)
                 
-                # Create a simple PDF content
+                # Create a simple, valid PDF content
+                title_text = doc.title.replace('(', '').replace(')', '').replace('\\', '')
+                current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                
                 pdf_content = f"""%PDF-1.4
 1 0 obj
 <<
@@ -824,18 +836,34 @@ endobj
 /Parent 2 0 R
 /MediaBox [0 0 612 792]
 /Contents 4 0 R
+/Resources <<
+/Font <<
+/F1 <<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+>>
+>>
+>>
 >>
 endobj
 
 4 0 obj
 <<
-/Length 44
+/Length 200
 >>
 stream
 BT
-/F1 12 Tf
+/F1 16 Tf
 72 720 Td
-(Sample content for {doc.title}) Tj
+({title_text}) Tj
+0 -30 Td
+/F1 12 Tf
+(Sample document content) Tj
+0 -20 Td
+(Created on {current_time}) Tj
+0 -20 Td
+(SequoAlpha Management) Tj
 ET
 endstream
 endobj
@@ -853,12 +881,13 @@ trailer
 /Root 1 0 R
 >>
 startxref
-297
+500
 %%EOF"""
                 
                 try:
-                    with open(file_path, 'w', encoding='utf-8') as f:
-                        f.write(pdf_content)
+                    # Write as binary to ensure proper PDF format
+                    with open(file_path, 'wb') as f:
+                        f.write(pdf_content.encode('utf-8'))
                     created_files.append(doc.filename)
                     print(f"✅ Created: {doc.filename}")
                 except Exception as e:
@@ -889,3 +918,4 @@ if __name__ == '__main__':
     
     port = int(os.environ.get('PORT', 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
