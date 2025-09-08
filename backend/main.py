@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, make_response
 from flask_cors import CORS
 import jwt
 from datetime import datetime, timedelta
@@ -458,9 +458,17 @@ def delete_document(document_id):
     
     return jsonify({"message": "Document deleted successfully"})
 
-@app.route('/admin/documents/<int:document_id>/download', methods=['GET'])
+@app.route('/admin/documents/<int:document_id>/download', methods=['GET', 'OPTIONS'])
 def download_document_by_id(document_id):
     try:
+        # Handle CORS preflight
+        if request.method == 'OPTIONS':
+            response = make_response('', 200)
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+            return response
+        
         auth_header = request.headers.get('Authorization')
         if not auth_header or not auth_header.startswith('Bearer '):
             return jsonify({"detail": "Token required"}), 401
@@ -502,10 +510,18 @@ def download_document_by_id(document_id):
         print(f"Download error: {str(e)}")
         return jsonify({"detail": "Download failed"}), 500
 
-@app.route('/documents/<int:document_id>/download', methods=['GET'])
+@app.route('/documents/<int:document_id>/download', methods=['GET', 'OPTIONS'])
 def download_document_user(document_id):
     try:
         print(f"📥 User download request for document ID: {document_id}")
+        
+        # Handle CORS preflight
+        if request.method == 'OPTIONS':
+            response = make_response('', 200)
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+            return response
         
         auth_header = request.headers.get('Authorization')
         if not auth_header or not auth_header.startswith('Bearer '):
