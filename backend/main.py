@@ -461,29 +461,61 @@ def delete_document(document_id):
         return jsonify({"detail": "Document not found"}), 404
     
     # Delete file from S3 if it exists
+    deletion_results = {
+        's3_deleted': False,
+        'local_deleted': False,
+        's3_error': None,
+        'local_error': None
+    }
+    
     if document.filename:
         s3_key = f"documents/{document.filename}"
-        if s3_manager.file_exists(s3_key):
-            if s3_manager.delete_file(s3_key):
-                print(f"✅ Deleted file from S3: {s3_key}")
-            else:
-                print(f"❌ Failed to delete file from S3: {s3_key}")
+        print(f"🗑️ Attempting to delete document: {document.title}")
+        print(f"📁 S3 key: {s3_key}")
+        
+        # Try to delete from S3
+        if s3_manager.s3_client:
+            try:
+                if s3_manager.file_exists(s3_key):
+                    if s3_manager.delete_file(s3_key):
+                        deletion_results['s3_deleted'] = True
+                        print(f"✅ Successfully deleted file from S3: {s3_key}")
+                    else:
+                        deletion_results['s3_error'] = "S3 delete operation failed"
+                        print(f"❌ Failed to delete file from S3: {s3_key}")
+                else:
+                    print(f"ℹ️ File not found in S3: {s3_key}")
+            except Exception as e:
+                deletion_results['s3_error'] = str(e)
+                print(f"❌ S3 deletion error: {e}")
+        else:
+            deletion_results['s3_error'] = "S3 client not available"
+            print(f"⚠️ S3 client not available, skipping S3 deletion")
         
         # Also delete local file if it exists (fallback)
         local_file_path = os.path.join(app.config['UPLOAD_FOLDER'], document.filename)
         if os.path.exists(local_file_path):
             try:
                 os.remove(local_file_path)
-                print(f"✅ Deleted local file: {local_file_path}")
+                deletion_results['local_deleted'] = True
+                print(f"✅ Successfully deleted local file: {local_file_path}")
             except Exception as e:
+                deletion_results['local_error'] = str(e)
                 print(f"❌ Failed to delete local file: {e}")
+        else:
+            print(f"ℹ️ Local file not found: {local_file_path}")
     
     # Remove from database
     db.session.delete(document)
     db.session.commit()
     
     print(f"✅ Document '{document.title}' deleted successfully from database")
-    return jsonify({"message": "Document deleted successfully"})
+    print(f"📊 Deletion summary: {deletion_results}")
+    
+    return jsonify({
+        "message": "Document deleted successfully",
+        "deletion_results": deletion_results
+    })
 
 @app.route('/admin/documents/<int:document_id>/download', methods=['GET', 'OPTIONS'])
 def download_document_by_id(document_id):
