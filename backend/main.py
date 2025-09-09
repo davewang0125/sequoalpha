@@ -8,6 +8,7 @@ import uuid
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from models import db, User, Document
+from s3_config import s3_manager
 
 load_dotenv()
 
@@ -366,14 +367,25 @@ def upload_document():
     # Generate unique filename
     filename = secure_filename(file.filename)
     unique_filename = f"{uuid.uuid4()}_{filename}"
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
     
-    # Save file
-    file.save(file_path)
+    # Save file temporarily
+    temp_file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+    file.save(temp_file_path)
     
     # Get file size
-    file_size = os.path.getsize(file_path)
+    file_size = os.path.getsize(temp_file_path)
     file_size_mb = round(file_size / (1024 * 1024), 1)
+    
+    # Upload to S3
+    s3_key = f"documents/{unique_filename}"
+    if s3_manager.upload_file(temp_file_path, s3_key):
+        # Delete temporary file
+        os.remove(temp_file_path)
+        print(f"✅ File uploaded to S3: {s3_key}")
+    else:
+        # If S3 upload fails, keep local file as fallback
+        print(f"❌ S3 upload failed, keeping local file: {temp_file_path}")
+        s3_key = None
     
     # Create document record
     document = Document(
@@ -550,9 +562,23 @@ def download_document_user(document_id):
             print("❌ Document has no filename")
             return jsonify({"detail": "No file associated with this document"}), 400
         
-        # Check if file exists
+        # Try to get file from S3 first
+        s3_key = f"documents/{document.filename}"
+        if s3_manager.file_exists(s3_key):
+            print(f"✅ File found in S3: {s3_key}")
+            # Generate presigned URL for direct download
+            download_url = s3_manager.generate_presigned_url(s3_key, expiration=3600)
+            if download_url:
+                print(f"🔗 Generated presigned URL for download")
+                return jsonify({
+                    "download_url": download_url,
+                    "filename": document.filename,
+                    "message": "Redirect to S3 for download"
+                })
+        
+        # Fallback to local file
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], document.filename)
-        print(f"📁 Checking file path: {file_path}")
+        print(f"📁 Checking local file path: {file_path}")
         if not os.path.exists(file_path):
             print(f"❌ File not found at: {file_path}")
             print(f"🔄 Creating temporary PDF file for: {document.title}")

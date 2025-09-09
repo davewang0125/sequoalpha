@@ -61,6 +61,28 @@ const UserDashboard = ({ user, onLogout }) => {
         throw new Error(`Download failed ${response.status}: ${errorText}`);
       }
 
+      // Check if response contains S3 download URL
+      const responseData = await response.json();
+      if (responseData.download_url) {
+        console.log('🔗 S3 download URL received:', responseData.download_url);
+        // Direct download from S3
+        const a = document.createElement('a');
+        a.href = responseData.download_url;
+        a.download = responseData.filename || `${doc.title}.pdf`;
+        a.target = '_blank';
+        console.log('📥 UserDashboard S3 download filename:', a.download);
+        
+        document.body.appendChild(a);
+        console.log('📥 UserDashboard triggering S3 download...');
+        a.click();
+        console.log('📥 UserDashboard S3 download triggered');
+        
+        document.body.removeChild(a);
+        console.log('📥 UserDashboard S3 download completed');
+        return;
+      }
+
+      // Fallback to blob download (local file)
       console.log('📥 UserDashboard processing blob...');
       const blob = await response.blob();
       console.log('📥 UserDashboard blob created:', blob.size, 'bytes');
