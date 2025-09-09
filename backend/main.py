@@ -889,6 +889,58 @@ def debug_files():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/debug/s3', methods=['GET'])
+def debug_s3():
+    """Debug endpoint to check S3 configuration"""
+    try:
+        # Check environment variables
+        aws_access_key = os.getenv('AWS_ACCESS_KEY_ID')
+        aws_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+        aws_region = os.getenv('AWS_REGION')
+        aws_bucket = os.getenv('AWS_S3_BUCKET_NAME')
+        
+        config_status = {
+            'aws_access_key_id': 'SET' if aws_access_key else 'NOT SET',
+            'aws_secret_access_key': 'SET' if aws_secret_key else 'NOT SET',
+            'aws_region': aws_region or 'NOT SET',
+            'aws_s3_bucket_name': aws_bucket or 'NOT SET'
+        }
+        
+        # Test S3 connection
+        s3_status = 'DISABLED'
+        if s3_manager.s3_client:
+            try:
+                # Try to list objects in bucket
+                response = s3_manager.s3_client.list_objects_v2(Bucket=aws_bucket, MaxKeys=1)
+                s3_status = 'CONNECTED'
+                bucket_objects = response.get('Contents', [])
+                s3_info = {
+                    'status': s3_status,
+                    'bucket_exists': True,
+                    'object_count': len(bucket_objects),
+                    'sample_objects': [obj['Key'] for obj in bucket_objects[:5]]
+                }
+            except Exception as e:
+                s3_status = f'ERROR: {str(e)}'
+                s3_info = {
+                    'status': s3_status,
+                    'bucket_exists': False,
+                    'error': str(e)
+                }
+        else:
+            s3_info = {
+                'status': s3_status,
+                'bucket_exists': False,
+                'error': 'S3 client not initialized'
+            }
+        
+        return jsonify({
+            'config': config_status,
+            's3': s3_info
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/debug/cleanup-orphaned', methods=['POST'])
 def cleanup_orphaned_documents():
     """Clean up documents that exist in DB but have no physical file"""
