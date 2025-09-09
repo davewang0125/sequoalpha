@@ -498,25 +498,133 @@ def download_document_by_id(document_id):
         if not document.filename:
             return jsonify({"detail": "No file associated with this document"}), 400
         
-        # Check if file exists
+        # Try to get file from S3 first
+        s3_key = f"documents/{document.filename}"
+        if s3_manager.file_exists(s3_key):
+            print(f"✅ Admin: File found in S3: {s3_key}")
+            # Generate presigned URL for direct download
+            download_url = s3_manager.generate_presigned_url(s3_key, expiration=3600)
+            if download_url:
+                print(f"🔗 Admin: Generated presigned URL for download")
+                return jsonify({
+                    "download_url": download_url,
+                    "filename": document.filename,
+                    "message": "Redirect to S3 for download"
+                })
+        
+        # Fallback to local file
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], document.filename)
-        if not os.path.exists(file_path):
-            return jsonify({"detail": "File not found"}), 404
+        print(f"📁 Admin: Checking local file path: {file_path}")
         
-        # Set proper headers for file download
-        response = send_from_directory(
-            app.config['UPLOAD_FOLDER'], 
-            document.filename, 
-            as_attachment=True,
-            download_name=document.title.replace(' ', '_') + '.pdf'
-        )
+        if os.path.exists(file_path):
+            print(f"✅ Admin: Local file exists, proceeding with download")
+            response = send_from_directory(
+                app.config['UPLOAD_FOLDER'], 
+                document.filename, 
+                as_attachment=True,
+                download_name=document.title.replace(' ', '_') + '.pdf'
+            )
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Authorization, Content-Type'
+            return response
         
-        # Add CORS headers for download
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Authorization, Content-Type'
-        
-        return response
+        # If neither S3 nor local file exists, create temporary PDF
+        print(f"❌ Admin: File not found in S3 or locally, creating temporary PDF")
+        try:
+            title_text = document.title.replace('(', '').replace(')', '').replace('\\', '')
+            current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            
+            pdf_content = f"""%PDF-1.4
+1 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+
+2 0 obj
+<<
+/Type /Pages
+/Kids [3 0 R]
+/Count 1
+>>
+endobj
+
+3 0 obj
+<<
+/Type /Page
+/Parent 2 0 R
+/MediaBox [0 0 612 792]
+/Contents 4 0 R
+/Resources <<
+/Font <<
+/F1 <<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+>>
+>>
+>>
+>>
+endobj
+
+4 0 obj
+<<
+/Length 200
+>>
+stream
+BT
+/F1 16 Tf
+72 720 Td
+({title_text}) Tj
+0 -30 Td
+/F1 12 Tf
+(This is a temporary file) Tj
+0 -20 Td
+(Created on {current_time}) Tj
+0 -20 Td
+(File not found on server) Tj
+0 -20 Td
+(Please contact administrator) Tj
+ET
+endstream
+endobj
+
+xref
+0 5
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000204 00000 n 
+trailer
+<<
+/Size 5
+/Root 1 0 R
+>>
+startxref
+500
+%%EOF"""
+            
+            with open(file_path, 'wb') as f:
+                f.write(pdf_content.encode('utf-8'))
+            print(f"✅ Admin: Created temporary PDF file: {document.filename}")
+            
+            response = send_from_directory(
+                app.config['UPLOAD_FOLDER'], 
+                document.filename, 
+                as_attachment=True,
+                download_name=document.title.replace(' ', '_') + '.pdf'
+            )
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Authorization, Content-Type'
+            return response
+            
+        except Exception as e:
+            print(f"❌ Admin: Failed to create temporary file: {e}")
+            return jsonify({"detail": "File not found and could not create temporary file"}), 404
         
     except Exception as e:
         print(f"Download error: {str(e)}")
