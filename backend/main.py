@@ -460,14 +460,29 @@ def delete_document(document_id):
     if not document:
         return jsonify({"detail": "Document not found"}), 404
     
-    # Delete file if it exists
-    if document.filename and os.path.exists(os.path.join(app.config['UPLOAD_FOLDER'], document.filename)):
-        os.remove(os.path.join(app.config['UPLOAD_FOLDER'], document.filename))
+    # Delete file from S3 if it exists
+    if document.filename:
+        s3_key = f"documents/{document.filename}"
+        if s3_manager.file_exists(s3_key):
+            if s3_manager.delete_file(s3_key):
+                print(f"✅ Deleted file from S3: {s3_key}")
+            else:
+                print(f"❌ Failed to delete file from S3: {s3_key}")
+        
+        # Also delete local file if it exists (fallback)
+        local_file_path = os.path.join(app.config['UPLOAD_FOLDER'], document.filename)
+        if os.path.exists(local_file_path):
+            try:
+                os.remove(local_file_path)
+                print(f"✅ Deleted local file: {local_file_path}")
+            except Exception as e:
+                print(f"❌ Failed to delete local file: {e}")
     
     # Remove from database
     db.session.delete(document)
     db.session.commit()
     
+    print(f"✅ Document '{document.title}' deleted successfully from database")
     return jsonify({"message": "Document deleted successfully"})
 
 @app.route('/admin/documents/<int:document_id>/download', methods=['GET', 'OPTIONS'])
