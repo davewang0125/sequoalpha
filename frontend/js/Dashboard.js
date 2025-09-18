@@ -6,7 +6,7 @@ const Dashboard = ({ user, onLogout, onOpenDocumentCenter }) => {
   const [error, setError] = React.useState('');
   const [showChangePassword, setShowChangePassword] = React.useState(false);
   const [showCreateUser, setShowCreateUser] = React.useState(false);
-  const [passwordData, setPasswordData] = React.useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [passwordData, setPasswordData] = React.useState({ username: '', newPassword: '', confirmPassword: '' });
   const [userData, setUserData] = React.useState({ username: '', email: '', password: '', fullName: '' });
   const [message, setMessage] = React.useState('');
 
@@ -41,14 +41,14 @@ const Dashboard = ({ user, onLogout, onOpenDocumentCenter }) => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          current_password: passwordData.currentPassword,
+          username: passwordData.username,
           new_password: passwordData.newPassword
         })
       });
 
       if (response.ok) {
         setMessage('Password changed successfully!');
-        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        setPasswordData({ username: '', newPassword: '', confirmPassword: '' });
         setShowChangePassword(false);
       } else {
         const errorData = await response.json();
@@ -185,11 +185,12 @@ const Dashboard = ({ user, onLogout, onOpenDocumentCenter }) => {
             </div>
             <form onSubmit={handleChangePassword} className="modal-form">
               <div className="form-group">
-                <label>Current Password:</label>
+                <label>Username (to change password):</label>
                 <input
-                  type="password"
-                  value={passwordData.currentPassword}
-                  onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
+                  type="text"
+                  value={passwordData.username}
+                  onChange={(e) => setPasswordData({...passwordData, username: e.target.value})}
+                  placeholder="Enter username to change password"
                   required
                 />
               </div>
