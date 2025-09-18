@@ -38,29 +38,74 @@ const UserDashboard = ({ user, onLogout }) => {
     onLogout();
   };
 
-  const handleDownload = async (document) => {
+  const handleDownload = async (doc) => {
     try {
+      console.log('🔍 UserDashboard handleDownload called with:', doc);
       const token = localStorage.getItem('token');
-      const response = await fetch(`${window.API_BASE_URL}/documents/${document.id}/download`, {
+      console.log('🔑 UserDashboard token:', token ? `${token.substring(0, 20)}...` : 'No token');
+      console.log('🌍 UserDashboard API URL:', window.API_BASE_URL);
+      console.log('📥 UserDashboard download URL:', `${window.API_BASE_URL}/documents/${doc.id}/download`);
+      
+      const response = await fetch(`${window.API_BASE_URL}/documents/${doc.id}/download`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
+      console.log('📥 UserDashboard response status:', response.status);
+      console.log('📥 UserDashboard response headers:', response.headers);
+
       if (!response.ok) {
         const errorText = await response.text();
+        console.log('❌ UserDashboard error response:', errorText);
         throw new Error(`Download failed ${response.status}: ${errorText}`);
       }
 
+      // Check if response contains S3 download URL (JSON response)
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const responseData = await response.json();
+        if (responseData.download_url) {
+          console.log('🔗 S3 download URL received:', responseData.download_url);
+          // Direct download from S3
+          const a = document.createElement('a');
+          a.href = responseData.download_url;
+          a.download = responseData.filename || `${doc.title}.pdf`;
+          a.target = '_blank';
+          console.log('📥 UserDashboard S3 download filename:', a.download);
+          
+          document.body.appendChild(a);
+          console.log('📥 UserDashboard triggering S3 download...');
+          a.click();
+          console.log('📥 UserDashboard S3 download triggered');
+          
+          document.body.removeChild(a);
+          console.log('📥 UserDashboard S3 download completed');
+          return;
+        }
+      }
+
+      // Fallback to blob download (local file or direct file response)
+      console.log('📥 UserDashboard processing blob...');
       const blob = await response.blob();
+      console.log('📥 UserDashboard blob created:', blob.size, 'bytes');
+      
       const url = window.URL.createObjectURL(blob);
+      console.log('📥 UserDashboard object URL created:', url);
+      
       const a = document.createElement('a');
       a.href = url;
-      a.download = document.filename || `${document.title}.pdf`;
+      a.download = doc.filename || `${doc.title}.pdf`;
+      console.log('📥 UserDashboard download filename:', a.download);
+      
       document.body.appendChild(a);
+      console.log('📥 UserDashboard triggering click...');
       a.click();
+      console.log('📥 UserDashboard click triggered');
+      
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+      console.log('📥 UserDashboard download completed');
     } catch (err) {
       setError('Error downloading document: ' + err.message);
     }

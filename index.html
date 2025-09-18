@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SequoAlpha Management LLC - Professional Management Solutions</title>
+    <title>SequoAlpha Management LLC - Professional Management Solutions - Updated</title>
     <link rel="icon" type="image/png" href="favicon64.png" />
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -142,11 +142,11 @@
             if (currentView === 'app') {
                 if (isAuthenticated) {
                     if (appView === 'documentCenter') {
+                        const token = localStorage.getItem('token');
                         return (
                             <DocumentCenter 
-                                user={user} 
+                                token={token}
                                 onBack={handleBackToDashboard} 
-                                onLogout={handleLogout}
                             />
                         );
                     } else {
@@ -177,7 +177,7 @@
 
         // Render the main app
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        root.render(<MainApp />);
     </script>
 </body>
 </html>

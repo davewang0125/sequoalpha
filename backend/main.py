@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, make_response
 from flask_cors import CORS
 import jwt
 from datetime import datetime, timedelta
@@ -8,6 +8,7 @@ import uuid
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from models import db, User, Document
+from s3_config import s3_manager
 
 load_dotenv()
 
@@ -40,11 +41,6 @@ if DATABASE_URL.startswith('postgres://'):
     print(f"🔄 Fixed PostgreSQL URL: {DATABASE_URL}")
 
 # Configure Flask-SQLAlchemy
-# DBUSER = os.getenv('DATABASE_USER', '')
-# DBPASSWORD = os.getenv('DATABASE_PASSWORD', '')
-# HOSTNAME = os.getenv('DATABASE_HOST', '')
-# DBNAME = os.getenv('DATABASE_NAME', '')
-# DATABASE_URL = "postgresql://DBUSER:DBPASSWORD@HOSTNAME/DBNAME"
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
@@ -371,14 +367,25 @@ def upload_document():
     # Generate unique filename
     filename = secure_filename(file.filename)
     unique_filename = f"{uuid.uuid4()}_{filename}"
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
     
-    # Save file
-    file.save(file_path)
+    # Save file temporarily
+    temp_file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+    file.save(temp_file_path)
     
     # Get file size
-    file_size = os.path.getsize(file_path)
+    file_size = os.path.getsize(temp_file_path)
     file_size_mb = round(file_size / (1024 * 1024), 1)
+    
+    # Upload to S3
+    s3_key = f"documents/{unique_filename}"
+    if s3_manager.upload_file(temp_file_path, s3_key):
+        # Delete temporary file
+        os.remove(temp_file_path)
+        print(f"✅ File uploaded to S3: {s3_key}")
+    else:
+        # If S3 upload fails, keep local file as fallback
+        print(f"❌ S3 upload failed, keeping local file: {temp_file_path}")
+        s3_key = None
     
     # Create document record
     document = Document(
@@ -453,19 +460,74 @@ def delete_document(document_id):
     if not document:
         return jsonify({"detail": "Document not found"}), 404
     
-    # Delete file if it exists
-    if document.filename and os.path.exists(os.path.join(app.config['UPLOAD_FOLDER'], document.filename)):
-        os.remove(os.path.join(app.config['UPLOAD_FOLDER'], document.filename))
+    # Delete file from S3 if it exists
+    deletion_results = {
+        's3_deleted': False,
+        'local_deleted': False,
+        's3_error': None,
+        'local_error': None
+    }
+    
+    if document.filename:
+        s3_key = f"documents/{document.filename}"
+        print(f"🗑️ Attempting to delete document: {document.title}")
+        print(f"📁 S3 key: {s3_key}")
+        
+        # Try to delete from S3
+        if s3_manager.s3_client:
+            try:
+                if s3_manager.file_exists(s3_key):
+                    if s3_manager.delete_file(s3_key):
+                        deletion_results['s3_deleted'] = True
+                        print(f"✅ Successfully deleted file from S3: {s3_key}")
+                    else:
+                        deletion_results['s3_error'] = "S3 delete operation failed"
+                        print(f"❌ Failed to delete file from S3: {s3_key}")
+                else:
+                    print(f"ℹ️ File not found in S3: {s3_key}")
+            except Exception as e:
+                deletion_results['s3_error'] = str(e)
+                print(f"❌ S3 deletion error: {e}")
+        else:
+            deletion_results['s3_error'] = "S3 client not available"
+            print(f"⚠️ S3 client not available, skipping S3 deletion")
+        
+        # Also delete local file if it exists (fallback)
+        local_file_path = os.path.join(app.config['UPLOAD_FOLDER'], document.filename)
+        if os.path.exists(local_file_path):
+            try:
+                os.remove(local_file_path)
+                deletion_results['local_deleted'] = True
+                print(f"✅ Successfully deleted local file: {local_file_path}")
+            except Exception as e:
+                deletion_results['local_error'] = str(e)
+                print(f"❌ Failed to delete local file: {e}")
+        else:
+            print(f"ℹ️ Local file not found: {local_file_path}")
     
     # Remove from database
     db.session.delete(document)
     db.session.commit()
     
-    return jsonify({"message": "Document deleted successfully"})
+    print(f"✅ Document '{document.title}' deleted successfully from database")
+    print(f"📊 Deletion summary: {deletion_results}")
+    
+    return jsonify({
+        "message": "Document deleted successfully",
+        "deletion_results": deletion_results
+    })
 
-@app.route('/admin/documents/<int:document_id>/download', methods=['GET'])
+@app.route('/admin/documents/<int:document_id>/download', methods=['GET', 'OPTIONS'])
 def download_document_by_id(document_id):
     try:
+        # Handle CORS preflight
+        if request.method == 'OPTIONS':
+            response = make_response('', 200)
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+            return response
+        
         auth_header = request.headers.get('Authorization')
         if not auth_header or not auth_header.startswith('Bearer '):
             return jsonify({"detail": "Token required"}), 401
@@ -483,34 +545,150 @@ def download_document_by_id(document_id):
         if not document.filename:
             return jsonify({"detail": "No file associated with this document"}), 400
         
-        # Check if file exists
+        # Try to get file from S3 first
+        s3_key = f"documents/{document.filename}"
+        if s3_manager.file_exists(s3_key):
+            print(f"✅ Admin: File found in S3: {s3_key}")
+            # Generate presigned URL for direct download
+            download_url = s3_manager.generate_presigned_url(s3_key, expiration=3600)
+            if download_url:
+                print(f"🔗 Admin: Generated presigned URL for download")
+                return jsonify({
+                    "download_url": download_url,
+                    "filename": document.filename,
+                    "message": "Redirect to S3 for download"
+                })
+        
+        # Fallback to local file
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], document.filename)
-        if not os.path.exists(file_path):
-            return jsonify({"detail": "File not found"}), 404
+        print(f"📁 Admin: Checking local file path: {file_path}")
         
-        # Set proper headers for file download
-        response = send_from_directory(
-            app.config['UPLOAD_FOLDER'], 
-            document.filename, 
-            as_attachment=True,
-            download_name=document.title.replace(' ', '_') + '.pdf'
-        )
+        if os.path.exists(file_path):
+            print(f"✅ Admin: Local file exists, proceeding with download")
+            response = send_from_directory(
+                app.config['UPLOAD_FOLDER'], 
+                document.filename, 
+                as_attachment=True,
+                download_name=document.title.replace(' ', '_') + '.pdf'
+            )
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Authorization, Content-Type'
+            return response
         
-        # Add CORS headers for download
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Authorization, Content-Type'
-        
-        return response
+        # If neither S3 nor local file exists, create temporary PDF
+        print(f"❌ Admin: File not found in S3 or locally, creating temporary PDF")
+        try:
+            title_text = document.title.replace('(', '').replace(')', '').replace('\\', '')
+            current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            
+            pdf_content = f"""%PDF-1.4
+1 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+
+2 0 obj
+<<
+/Type /Pages
+/Kids [3 0 R]
+/Count 1
+>>
+endobj
+
+3 0 obj
+<<
+/Type /Page
+/Parent 2 0 R
+/MediaBox [0 0 612 792]
+/Contents 4 0 R
+/Resources <<
+/Font <<
+/F1 <<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+>>
+>>
+>>
+>>
+endobj
+
+4 0 obj
+<<
+/Length 200
+>>
+stream
+BT
+/F1 16 Tf
+72 720 Td
+({title_text}) Tj
+0 -30 Td
+/F1 12 Tf
+(This is a temporary file) Tj
+0 -20 Td
+(Created on {current_time}) Tj
+0 -20 Td
+(File not found on server) Tj
+0 -20 Td
+(Please contact administrator) Tj
+ET
+endstream
+endobj
+
+xref
+0 5
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000204 00000 n 
+trailer
+<<
+/Size 5
+/Root 1 0 R
+>>
+startxref
+500
+%%EOF"""
+            
+            with open(file_path, 'wb') as f:
+                f.write(pdf_content.encode('utf-8'))
+            print(f"✅ Admin: Created temporary PDF file: {document.filename}")
+            
+            response = send_from_directory(
+                app.config['UPLOAD_FOLDER'], 
+                document.filename, 
+                as_attachment=True,
+                download_name=document.title.replace(' ', '_') + '.pdf'
+            )
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Authorization, Content-Type'
+            return response
+            
+        except Exception as e:
+            print(f"❌ Admin: Failed to create temporary file: {e}")
+            return jsonify({"detail": "File not found and could not create temporary file"}), 404
         
     except Exception as e:
         print(f"Download error: {str(e)}")
         return jsonify({"detail": "Download failed"}), 500
 
-@app.route('/documents/<int:document_id>/download', methods=['GET'])
+@app.route('/documents/<int:document_id>/download', methods=['GET', 'OPTIONS'])
 def download_document_user(document_id):
     try:
         print(f"📥 User download request for document ID: {document_id}")
+        
+        # Handle CORS preflight
+        if request.method == 'OPTIONS':
+            response = make_response('', 200)
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+            return response
         
         auth_header = request.headers.get('Authorization')
         if not auth_header or not auth_header.startswith('Bearer '):
@@ -539,12 +717,113 @@ def download_document_user(document_id):
             print("❌ Document has no filename")
             return jsonify({"detail": "No file associated with this document"}), 400
         
-        # Check if file exists
+        # Try to get file from S3 first
+        s3_key = f"documents/{document.filename}"
+        if s3_manager.file_exists(s3_key):
+            print(f"✅ File found in S3: {s3_key}")
+            # Generate presigned URL for direct download
+            download_url = s3_manager.generate_presigned_url(s3_key, expiration=3600)
+            if download_url:
+                print(f"🔗 Generated presigned URL for download")
+                return jsonify({
+                    "download_url": download_url,
+                    "filename": document.filename,
+                    "message": "Redirect to S3 for download"
+                })
+        
+        # Fallback to local file
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], document.filename)
-        print(f"📁 Checking file path: {file_path}")
+        print(f"📁 Checking local file path: {file_path}")
         if not os.path.exists(file_path):
             print(f"❌ File not found at: {file_path}")
-            return jsonify({"detail": "File not found on server"}), 404
+            print(f"🔄 Creating temporary PDF file for: {document.title}")
+            
+            # Create a temporary PDF file
+            try:
+                # Create a simple, valid PDF content
+                title_text = document.title.replace('(', '').replace(')', '').replace('\\', '')
+                current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                
+                # Simple PDF structure
+                pdf_content = f"""%PDF-1.4
+1 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+
+2 0 obj
+<<
+/Type /Pages
+/Kids [3 0 R]
+/Count 1
+>>
+endobj
+
+3 0 obj
+<<
+/Type /Page
+/Parent 2 0 R
+/MediaBox [0 0 612 792]
+/Contents 4 0 R
+/Resources <<
+/Font <<
+/F1 <<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+>>
+>>
+>>
+>>
+endobj
+
+4 0 obj
+<<
+/Length 200
+>>
+stream
+BT
+/F1 16 Tf
+72 720 Td
+({title_text}) Tj
+0 -30 Td
+/F1 12 Tf
+(This is a temporary file) Tj
+0 -20 Td
+(Created on {current_time}) Tj
+0 -20 Td
+(File not found on server) Tj
+0 -20 Td
+(Please contact administrator) Tj
+ET
+endstream
+endobj
+
+xref
+0 5
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000204 00000 n 
+trailer
+<<
+/Size 5
+/Root 1 0 R
+>>
+startxref
+500
+%%EOF"""
+                
+                # Write as binary to ensure proper PDF format
+                with open(file_path, 'wb') as f:
+                    f.write(pdf_content.encode('utf-8'))
+                print(f"✅ Created temporary PDF file: {document.filename}")
+            except Exception as e:
+                print(f"❌ Failed to create temporary file: {e}")
+                return jsonify({"detail": "File not found on server and could not create temporary file"}), 404
         
         print(f"✅ File exists, proceeding with download")
         
@@ -557,6 +836,9 @@ def download_document_user(document_id):
             as_attachment=True,
             download_name=document.filename
         )
+        
+        print(f"📥 Response created, content-type: {response.content_type}")
+        print(f"📥 Response headers: {dict(response.headers)}")
         
         # Add CORS headers
         response.headers['Access-Control-Allow-Origin'] = '*'
@@ -639,6 +921,58 @@ def debug_files():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/debug/s3', methods=['GET'])
+def debug_s3():
+    """Debug endpoint to check S3 configuration"""
+    try:
+        # Check environment variables
+        aws_access_key = os.getenv('AWS_ACCESS_KEY_ID')
+        aws_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+        aws_region = os.getenv('AWS_REGION')
+        aws_bucket = os.getenv('AWS_S3_BUCKET_NAME')
+        
+        config_status = {
+            'aws_access_key_id': 'SET' if aws_access_key else 'NOT SET',
+            'aws_secret_access_key': 'SET' if aws_secret_key else 'NOT SET',
+            'aws_region': aws_region or 'NOT SET',
+            'aws_s3_bucket_name': aws_bucket or 'NOT SET'
+        }
+        
+        # Test S3 connection
+        s3_status = 'DISABLED'
+        if s3_manager.s3_client:
+            try:
+                # Try to list objects in bucket
+                response = s3_manager.s3_client.list_objects_v2(Bucket=aws_bucket, MaxKeys=1)
+                s3_status = 'CONNECTED'
+                bucket_objects = response.get('Contents', [])
+                s3_info = {
+                    'status': s3_status,
+                    'bucket_exists': True,
+                    'object_count': len(bucket_objects),
+                    'sample_objects': [obj['Key'] for obj in bucket_objects[:5]]
+                }
+            except Exception as e:
+                s3_status = f'ERROR: {str(e)}'
+                s3_info = {
+                    'status': s3_status,
+                    'bucket_exists': False,
+                    'error': str(e)
+                }
+        else:
+            s3_info = {
+                'status': s3_status,
+                'bucket_exists': False,
+                'error': 'S3 client not initialized'
+            }
+        
+        return jsonify({
+            'config': config_status,
+            's3': s3_info
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/debug/cleanup-orphaned', methods=['POST'])
 def cleanup_orphaned_documents():
     """Clean up documents that exist in DB but have no physical file"""
@@ -683,10 +1017,138 @@ def cleanup_orphaned_documents():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/debug/recreate-sample-files', methods=['POST'])
+def recreate_sample_files():
+    """Recreate sample PDF files for existing documents"""
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({"detail": "Token required"}), 401
+        
+        token = auth_header.split(' ')[1]
+        current_user = get_current_user(token)
+        if not current_user or not current_user.is_admin:
+            return jsonify({"detail": "Admin privileges required"}), 403
+        
+        print("🔄 Recreating sample PDF files...")
+        
+        # Get all PDF documents from DB
+        pdf_documents = Document.query.filter_by(type="PDF").all()
+        created_files = []
+        failed_files = []
+        
+        for doc in pdf_documents:
+            if doc.filename:
+                # Create the PDF file
+                upload_dir = app.config['UPLOAD_FOLDER']
+                file_path = os.path.join(upload_dir, doc.filename)
+                
+                # Create a simple, valid PDF content
+                title_text = doc.title.replace('(', '').replace(')', '').replace('\\', '')
+                current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                
+                pdf_content = f"""%PDF-1.4
+1 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+
+2 0 obj
+<<
+/Type /Pages
+/Kids [3 0 R]
+/Count 1
+>>
+endobj
+
+3 0 obj
+<<
+/Type /Page
+/Parent 2 0 R
+/MediaBox [0 0 612 792]
+/Contents 4 0 R
+/Resources <<
+/Font <<
+/F1 <<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+>>
+>>
+>>
+>>
+endobj
+
+4 0 obj
+<<
+/Length 200
+>>
+stream
+BT
+/F1 16 Tf
+72 720 Td
+({title_text}) Tj
+0 -30 Td
+/F1 12 Tf
+(Sample document content) Tj
+0 -20 Td
+(Created on {current_time}) Tj
+0 -20 Td
+(SequoAlpha Management) Tj
+ET
+endstream
+endobj
+
+xref
+0 5
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000204 00000 n 
+trailer
+<<
+/Size 5
+/Root 1 0 R
+>>
+startxref
+500
+%%EOF"""
+                
+                try:
+                    # Write as binary to ensure proper PDF format
+                    with open(file_path, 'wb') as f:
+                        f.write(pdf_content.encode('utf-8'))
+                    created_files.append(doc.filename)
+                    print(f"✅ Created: {doc.filename}")
+                except Exception as e:
+                    failed_files.append({"filename": doc.filename, "error": str(e)})
+                    print(f"❌ Failed to create {doc.filename}: {e}")
+        
+        return jsonify({
+            "message": "Sample files recreation completed",
+            "created_files": created_files,
+            "failed_files": failed_files,
+            "total_created": len(created_files),
+            "total_failed": len(failed_files)
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/', methods=['GET'])
 def root():
     return jsonify({"message": "SequoAlpha Management API - Secure Access Only"})
 
 if __name__ == '__main__':
+    # Initialize database and create sample files
+    with app.app_context():
+        from init_db import init_database
+        init_database()
+        print("✅ Database initialized and sample files created")
+    
     port = int(os.environ.get('PORT', 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
