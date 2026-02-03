@@ -1,0 +1,48 @@
+[Unit]
+Description=SequoAlpha Management System Backend
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=notify
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/sequoalpha/backend
+Environment="PATH=/home/ubuntu/sequoalpha/backend/venv/bin"
+EnvironmentFile=/home/ubuntu/sequoalpha/backend/.env
+
+# Gunicorn configuration
+ExecStart=/home/ubuntu/sequoalpha/backend/venv/bin/gunicorn \
+    --bind 127.0.0.1:8000 \
+    --workers 3 \
+    --worker-class sync \
+    --timeout 120 \
+    --log-level info \
+    --access-logfile /var/log/sequoalpha/access.log \
+    --error-logfile /var/log/sequoalpha/error.log \
+    main:app
+
+# Restart policy
+Restart=always
+RestartSec=10
+StartLimitInterval=200
+StartLimitBurst=5
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/ubuntu/sequoalpha/backend/uploads
+ReadWritePaths=/var/log/sequoalpha
+
+# Resource limits
+LimitNOFILE=4096
+LimitNPROC=512
+
+# Standard output and error
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

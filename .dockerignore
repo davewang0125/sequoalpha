@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Database
+*.db
+*.sqlite3
+
+# Environment
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Deployment files
+deploy_ec2.sh
+update.sh
+manage.sh
+nginx.conf
+sequoalpha.service
+*.md
+!README.md
+
+# Node modules (if any)
+node_modules/
+
+# Logs
+*.log
+
+# Render/Netlify specific
+render.yaml
+netlify.toml
+_redirects
+backend/start.sh
