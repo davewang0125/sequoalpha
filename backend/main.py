@@ -13,14 +13,36 @@ from s3_config import s3_manager
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, resources={
-    r"/*": {
-        "origins": ["http://localhost:8080", "http://localhost:3000", "https://sequopreview.netlify.app", "https://*.netlify.app"],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"],
-        "supports_credentials": True
-    }
-})
+
+# Dynamic CORS configuration
+cors_origins = os.getenv('CORS_ORIGINS', '').split(',') if os.getenv('CORS_ORIGINS') else []
+default_origins = [
+    "http://localhost:8080",
+    "http://localhost:3000",
+    "https://sequopreview.netlify.app",
+    "https://*.netlify.app"
+]
+allowed_origins = cors_origins + default_origins if cors_origins else default_origins
+
+# For production EC2 deployment, allow all origins when CORS_ORIGINS is set to '*'
+if os.getenv('CORS_ORIGINS') == '*':
+    CORS(app, resources={
+        r"/*": {
+            "origins": "*",
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization"],
+            "supports_credentials": False
+        }
+    })
+else:
+    CORS(app, resources={
+        r"/*": {
+            "origins": allowed_origins,
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization"],
+            "supports_credentials": True
+        }
+    })
 
 # Database configuration
 import os

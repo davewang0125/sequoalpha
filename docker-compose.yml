@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: sequoalpha-postgres
+    environment:
+      POSTGRES_DB: sequoalpha
+      POSTGRES_USER: sequoalpha_user
+      POSTGRES_PASSWORD: sequoalpha_password
+    ports:
+      - "5433:5432"  # Changed to 5433 to avoid conflict with local PostgreSQL
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sequoalpha_user -d sequoalpha"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sequoalpha-network
+
+  # Backend Flask Application
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: sequoalpha-backend
+    environment:
+      - SECRET_KEY=docker-test-secret-key-change-in-production
+      - FLASK_ENV=development
+      - FLASK_DEBUG=True
+      - DATABASE_URL=postgresql://sequoalpha_user:sequoalpha_password@postgres:5432/sequoalpha
+      - PORT=8000
+      # Optional: Add S3 credentials if you want to test S3
+      # - AWS_ACCESS_KEY_ID=your-key
+      # - AWS_SECRET_ACCESS_KEY=your-secret
+      # - AWS_REGION=us-east-1
+      # - AWS_S3_BUCKET_NAME=your-bucket
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - backend_uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - sequoalpha-network
+    command: >
+      sh -c "python init_db.py && 
+             gunicorn main:app --bind 0.0.0.0:8000 --workers 2 --timeout 120 --reload --log-level debug"
+
+  # Frontend Nginx
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: sequoalpha-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    networks:
+      - sequoalpha-network
+    volumes:
+      # Mount for live updates during development
+      - ./index.html:/usr/share/nginx/html/index.html:ro
+      - ./frontend:/usr/share/nginx/html/frontend:ro
+      - ./css:/usr/share/nginx/html/css:ro
+      - ./images:/usr/share/nginx/html/images:ro
+
+volumes:
+  postgres_data:
+  backend_uploads:
+
+networks:
+  sequoalpha-network:
+    driver: bridge
