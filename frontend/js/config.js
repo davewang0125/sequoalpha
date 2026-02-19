@@ -12,11 +12,11 @@ const config = {
   },
   // Legacy: Render deployment (if still using)
   render: {
-    apiUrl: 'https://sequoalpha-backend.onrender.com'
+    apiUrl: 'https://sequoalpha.onrender.com'
   },
   // Legacy: Netlify deployment (if still using)
   netlify: {
-    apiUrl: 'https://sequoalpha-backend.onrender.com'
+    apiUrl: 'https://sequoalpha.onrender.com'
   }
 };
 
