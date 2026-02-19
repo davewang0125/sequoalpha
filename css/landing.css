@@ -1,195 +1,356 @@
-/* Landing Page Styles */
+/* Landing Page - Single Viewport */
 .landing-page {
-    min-height: 100vh;
-    font-family: 'Poppins', sans-serif;
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-}
-
-/* Header */
-.header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 80px;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 50px;
-    z-index: 1000;
-    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
-}
-
-.logo {
-    width: 200px;
-    height: 50px;
-    background: url("../images/v1_27.png") no-repeat center center;
-    background-size: contain;
-}
-
-.login-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    padding: 12px 30px;
-    border-radius: 25px;
-    font-family: 'Poppins', sans-serif;
-    font-weight: 600;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-}
-
-.login-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-    background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
-}
-
-.login-btn:active {
-    transform: translateY(0);
-}
-
-/* Hero Section */
-.hero-section {
     height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    position: relative;
+    font-family: 'Space Grotesk', 'Poppins', sans-serif;
+    background: #f5f7fa;
+}
+
+/* Background Image - hidden when WebGL canvas is active, fallback otherwise */
+.landing-bg {
+    position: absolute;
+    inset: 0;
     background: url("../images/v1_21.png") no-repeat center center;
     background-size: cover;
+    z-index: 0;
+}
+
+/* Hide static bg when canvas is rendering */
+.landing-page canvas ~ .landing-bg {
+    display: none;
+}
+
+/* Cloud canvas is injected by clouds.js */
+
+/* Logo - Top Left */
+.landing-logo {
+    position: absolute;
+    top: 40px;
+    left: 50px;
+    z-index: 10;
+}
+
+.landing-logo img {
+    height: 48px;
+    width: auto;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.15));
+}
+
+/* Center Content */
+.landing-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    text-align: center;
+    width: 90%;
+    max-width: 780px;
+}
+
+.landing-tagline {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #1a2332;
+    margin: 0 0 20px 0;
+    line-height: 1.3;
+    text-shadow: 0 1px 12px rgba(255,255,255,0.8);
+}
+
+.landing-description {
+    font-size: 1.05rem;
+    font-weight: 400;
+    color: #2c3e50;
+    line-height: 1.7;
+    margin: 0;
+    padding: 20px 30px;
+    background: rgba(255,255,255,0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.4);
+    text-shadow: 0 1px 4px rgba(255,255,255,0.5);
+}
+
+/* Bottom Left Links */
+.landing-bottom-links {
+    position: absolute;
+    bottom: 40px;
+    left: 50px;
+    z-index: 10;
+    display: flex;
+    gap: 32px;
+    align-items: center;
+}
+
+.landing-link {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #0d1520;
+    text-decoration: none;
+    cursor: pointer;
+    padding: 8px 16px;
+    position: relative;
+    transition: all 0.3s ease;
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: none;
+    border-radius: 6px;
+}
+
+.landing-link::after {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    left: 0;
+    width: 0;
+    height: 1.5px;
+    background: #1a2332;
+    transition: width 0.3s ease;
+}
+
+.landing-link:hover::after {
+    width: 100%;
+}
+
+.landing-link:hover {
+    color: #0d1520;
+}
+
+/* Link separator */
+.landing-link-sep {
+    color: #0d1520;
+    opacity: 0.4;
+    font-weight: 300;
+    user-select: none;
+}
+
+/* Contact Modal */
+.contact-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 100;
     display: flex;
     align-items: center;
     justify-content: center;
+    animation: fadeIn 0.25s ease;
+}
+
+.contact-modal {
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 16px;
+    padding: 40px 44px;
+    max-width: 420px;
+    width: 90%;
     position: relative;
-    margin-top: 80px;
+    border: 1px solid rgba(255,255,255,0.5);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    animation: slideUp 0.3s ease;
 }
 
-.hero-info-overlay {
-    background: rgba(0, 0, 0, 0.7);
-    padding: 60px 40px;
-    border-radius: 20px;
-    text-align: center;
-    color: white;
-    max-width: 800px;
-    margin: 0 20px;
-    z-index: 2;
-    position: relative;
-}
-
-.hero-title {
-    font-size: 3rem;
-    font-weight: 700;
-    margin-bottom: 1rem;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-}
-
-.hero-subtitle {
-    font-size: 1.3rem;
-    font-weight: 300;
-    opacity: 0.9;
-    margin-bottom: 40px;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-}
-
-.hero-info {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 30px;
-    text-align: left;
-}
-
-.info-item {
-    padding: 20px;
-    border-radius: 15px;
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.info-item h3 {
-    color: white;
-    font-size: 1.1rem;
+.contact-modal h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.4rem;
     font-weight: 600;
-    margin-bottom: 0.5rem;
+    color: #1a2332;
+    margin: 0 0 24px 0;
 }
 
-.info-item p {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 0.9rem;
-    line-height: 1.4;
-    margin: 0;
+.contact-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    font-size: 0.95rem;
+    color: #2c3e50;
 }
 
-/* Footer */
-.footer {
-    background: #2c3e50;
-    color: white;
-    padding: 40px 50px;
-    text-align: center;
+.contact-item:last-child {
+    margin-bottom: 0;
 }
 
-.footer-content p {
-    margin: 0.5rem 0;
-    font-size: 0.9rem;
-    opacity: 0.8;
+.contact-item-label {
+    font-weight: 500;
+    min-width: 60px;
+    color: #1a2332;
 }
 
-/* Responsive Design */
+.contact-item a {
+    color: #2c3e50;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.contact-item a:hover {
+    color: #0d1520;
+}
+
+.contact-close {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    background: none;
+    border: none;
+    font-size: 1.4rem;
+    color: #1a2332;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    line-height: 1;
+}
+
+.contact-close:hover {
+    opacity: 1;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Bottom Right Copyright */
+.landing-copyright {
+    position: absolute;
+    bottom: 40px;
+    right: 50px;
+    z-index: 10;
+    font-size: 0.75rem;
+    color: #0d1520;
+    font-weight: 500;
+    padding: 6px 12px;
+    background: rgba(255,255,255,0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 6px;
+}
+
+/* Responsive - Tablet */
 @media (max-width: 768px) {
-    .header {
-        padding: 0 20px;
-        height: 70px;
+    .landing-logo {
+        top: 24px;
+        left: 24px;
     }
-    
-    .logo {
-        width: 150px;
-        height: 40px;
+
+    .landing-logo img {
+        height: 36px;
     }
-    
-    .login-btn {
-        padding: 10px 20px;
-        font-size: 12px;
+
+    .landing-content {
+        width: 92%;
     }
-    
-    .hero-title {
-        font-size: 2.5rem;
+
+    .landing-tagline {
+        font-size: 1.4rem;
     }
-    
-    .hero-subtitle {
-        font-size: 1.2rem;
+
+    .landing-description {
+        font-size: 0.9rem;
+        padding: 16px 20px;
     }
-    
-    .hero-info-overlay {
-        padding: 40px 20px;
-        margin: 0 15px;
+
+    .landing-bottom-links {
+        bottom: 24px;
+        left: 24px;
+        gap: 16px;
     }
-    
-    .hero-info {
-        grid-template-columns: 1fr;
-        gap: 20px;
+
+    .landing-copyright {
+        display: none;
     }
-    
-    .info-item {
-        padding: 15px;
-    }
-    
-    .footer {
-        padding: 30px 20px;
+
+    .contact-modal {
+        padding: 30px 28px;
     }
 }
 
+/* Responsive - Phone */
 @media (max-width: 480px) {
-    .hero-title {
-        font-size: 2rem;
+    .landing-logo {
+        top: 20px;
+        left: 20px;
     }
-    
-    .hero-subtitle {
-        font-size: 1rem;
+
+    .landing-logo img {
+        height: 30px;
     }
-    
-    .hero-info-overlay {
-        padding: 30px 15px;
-        margin: 0 10px;
+
+    .landing-content {
+        width: 94%;
+        top: 45%;
+    }
+
+    .landing-tagline {
+        font-size: 1.15rem;
+        margin-bottom: 14px;
+    }
+
+    .landing-description {
+        font-size: 0.82rem;
+        padding: 12px 14px;
+        line-height: 1.6;
+    }
+
+    .landing-bottom-links {
+        bottom: 20px;
+        left: 20px;
+        gap: 12px;
+    }
+
+    .landing-link {
+        font-size: 0.82rem;
+        padding: 6px 12px;
+    }
+
+    .contact-modal {
+        padding: 24px 20px;
+        border-radius: 12px;
+    }
+
+    .contact-modal h2 {
+        font-size: 1.2rem;
+        margin-bottom: 18px;
+    }
+
+    .contact-item {
+        font-size: 0.85rem;
+    }
+}
+
+/* Landscape phones - content can get squeezed vertically */
+@media (max-height: 500px) {
+    .landing-content {
+        top: 48%;
+    }
+
+    .landing-tagline {
+        font-size: 1.1rem;
+        margin-bottom: 10px;
+    }
+
+    .landing-description {
+        font-size: 0.8rem;
+        padding: 10px 14px;
+    }
+
+    .landing-bottom-links {
+        bottom: 12px;
+    }
+
+    .landing-logo {
+        top: 12px;
     }
 }

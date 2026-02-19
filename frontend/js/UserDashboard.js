@@ -70,7 +70,7 @@ const UserDashboard = ({ user, onLogout }) => {
           // Direct download from S3
           const a = document.createElement('a');
           a.href = responseData.download_url;
-          a.download = responseData.filename || `${doc.title}.pdf`;
+          a.download = `${doc.title}.pdf`;
           a.target = '_blank';
           console.log('📥 UserDashboard S3 download filename:', a.download);
           
@@ -95,7 +95,7 @@ const UserDashboard = ({ user, onLogout }) => {
       
       const a = document.createElement('a');
       a.href = url;
-      a.download = doc.filename || `${doc.title}.pdf`;
+      a.download = `${doc.title}.pdf`;
       console.log('📥 UserDashboard download filename:', a.download);
       
       document.body.appendChild(a);
@@ -201,7 +201,6 @@ const UserDashboard = ({ user, onLogout }) => {
                       <div className="document-meta">
                         <span className="document-category">{doc.category}</span>
                         <span className="document-type">{doc.type}</span>
-                        {doc.file_size && <span className="document-size">{doc.file_size}</span>}
                       </div>
                       <div className="document-actions">
                         {doc.is_external ? (

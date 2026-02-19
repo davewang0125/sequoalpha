@@ -7,7 +7,8 @@ import os
 import uuid
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
-from models import db, User, Document
+from models import db, User, Document, Tag, UserTag, DocumentVisibility, Category
+import json
 from s3_config import s3_manager
 
 load_dotenv()
@@ -158,6 +159,24 @@ def get_current_admin(token):
         return None
     return user
 
+def save_document_visibility(document_id, visibility_data):
+    """Parse and save visibility rules for a document."""
+    if not visibility_data:
+        return
+    if isinstance(visibility_data, str):
+        visibility_data = json.loads(visibility_data)
+    # Clear existing rules
+    DocumentVisibility.query.filter_by(document_id=document_id).delete()
+    rules = visibility_data.get('rules', [])
+    for rule in rules:
+        vis = DocumentVisibility(
+            document_id=document_id,
+            visibility_type=rule.get('type'),
+            target_id=rule.get('target_id')
+        )
+        db.session.add(vis)
+    db.session.commit()
+
 @app.route('/test-cors', methods=['GET', 'OPTIONS'])
 def test_cors():
     if request.method == 'OPTIONS':
@@ -277,6 +296,104 @@ def get_users():
     
     return jsonify({"users": users_list})
 
+@app.route('/admin/users/<int:user_id>', methods=['DELETE'])
+def delete_user(user_id):
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"detail": "Admin token required"}), 401
+
+    token = auth_header.split(' ')[1]
+    current_admin = get_current_admin(token)
+    if not current_admin:
+        return jsonify({"detail": "Admin privileges required"}), 403
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"detail": "User not found"}), 404
+
+    if user.id == current_admin.id:
+        return jsonify({"detail": "Cannot delete yourself"}), 400
+
+    if user.is_admin:
+        return jsonify({"detail": "Cannot delete an admin user"}), 400
+
+    # Cleanup user_tags
+    UserTag.query.filter_by(user_id=user_id).delete()
+    # Cleanup document visibility rules targeting this user
+    DocumentVisibility.query.filter_by(visibility_type='user', target_id=user_id).delete()
+
+    db.session.delete(user)
+    db.session.commit()
+
+    return jsonify({"message": f"User '{user.username}' deleted successfully"})
+
+@app.route('/admin/categories', methods=['GET'])
+def get_categories():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"detail": "Token required"}), 401
+
+    token = auth_header.split(' ')[1]
+    current_user = get_current_user(token)
+    if not current_user:
+        return jsonify({"detail": "Invalid token"}), 401
+
+    categories = Category.query.order_by(Category.name).all()
+    result = []
+    for cat in categories:
+        doc_count = Document.query.filter_by(category=cat.name).count()
+        cat_dict = cat.to_dict()
+        cat_dict['document_count'] = doc_count
+        result.append(cat_dict)
+
+    return jsonify({"categories": result})
+
+@app.route('/admin/categories', methods=['POST'])
+def create_category():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"detail": "Admin token required"}), 401
+
+    token = auth_header.split(' ')[1]
+    current_admin = get_current_admin(token)
+    if not current_admin:
+        return jsonify({"detail": "Admin privileges required"}), 403
+
+    data = request.get_json()
+    name = data.get('name', '').strip()
+    if not name:
+        return jsonify({"detail": "Category name is required"}), 400
+    if Category.query.filter_by(name=name).first():
+        return jsonify({"detail": "Category already exists"}), 400
+
+    category = Category(name=name)
+    db.session.add(category)
+    db.session.commit()
+    return jsonify(category.to_dict()), 201
+
+@app.route('/admin/categories/<int:category_id>', methods=['DELETE'])
+def delete_category(category_id):
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"detail": "Admin token required"}), 401
+
+    token = auth_header.split(' ')[1]
+    current_admin = get_current_admin(token)
+    if not current_admin:
+        return jsonify({"detail": "Admin privileges required"}), 403
+
+    category = Category.query.get(category_id)
+    if not category:
+        return jsonify({"detail": "Category not found"}), 404
+
+    doc_count = Document.query.filter_by(category=category.name).count()
+    if doc_count > 0:
+        return jsonify({"detail": f"Cannot delete category with {doc_count} document(s). Remove or reassign documents first."}), 400
+
+    db.session.delete(category)
+    db.session.commit()
+    return jsonify({"message": f"Category '{category.name}' deleted successfully"})
+
 @app.route('/users/me', methods=['GET'])
 def read_users_me():
     auth_header = request.headers.get('Authorization')
@@ -291,6 +408,142 @@ def read_users_me():
     return jsonify(current_user.to_dict())
 
 
+
+# Tag management endpoints
+@app.route('/admin/tags', methods=['GET'])
+def get_tags():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"detail": "Admin token required"}), 401
+    token = auth_header.split(' ')[1]
+    current_admin = get_current_admin(token)
+    if not current_admin:
+        return jsonify({"detail": "Admin privileges required"}), 403
+
+    tags = Tag.query.all()
+    result = []
+    for tag in tags:
+        members = UserTag.query.filter_by(tag_id=tag.id).all()
+        member_list = []
+        for ut in members:
+            user = User.query.get(ut.user_id)
+            if user:
+                member_list.append(user.to_dict())
+        tag_dict = tag.to_dict()
+        tag_dict['members'] = member_list
+        tag_dict['member_count'] = len(member_list)
+        result.append(tag_dict)
+    return jsonify({"tags": result})
+
+@app.route('/admin/tags', methods=['POST'])
+def create_tag():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"detail": "Admin token required"}), 401
+    token = auth_header.split(' ')[1]
+    current_admin = get_current_admin(token)
+    if not current_admin:
+        return jsonify({"detail": "Admin privileges required"}), 403
+
+    data = request.get_json()
+    name = data.get('name', '').strip()
+    if not name:
+        return jsonify({"detail": "Tag name is required"}), 400
+    if Tag.query.filter_by(name=name).first():
+        return jsonify({"detail": "Tag name already exists"}), 400
+
+    tag = Tag(name=name, created_by=current_admin.id)
+    db.session.add(tag)
+    db.session.commit()
+    return jsonify(tag.to_dict()), 201
+
+@app.route('/admin/tags/<int:tag_id>', methods=['DELETE'])
+def delete_tag(tag_id):
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"detail": "Admin token required"}), 401
+    token = auth_header.split(' ')[1]
+    current_admin = get_current_admin(token)
+    if not current_admin:
+        return jsonify({"detail": "Admin privileges required"}), 403
+
+    tag = Tag.query.get(tag_id)
+    if not tag:
+        return jsonify({"detail": "Tag not found"}), 404
+
+    UserTag.query.filter_by(tag_id=tag_id).delete()
+    DocumentVisibility.query.filter_by(visibility_type='tag', target_id=tag_id).delete()
+    db.session.delete(tag)
+    db.session.commit()
+    return jsonify({"message": "Tag deleted successfully"})
+
+@app.route('/admin/tags/<int:tag_id>/users', methods=['POST'])
+def add_user_to_tag(tag_id):
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"detail": "Admin token required"}), 401
+    token = auth_header.split(' ')[1]
+    current_admin = get_current_admin(token)
+    if not current_admin:
+        return jsonify({"detail": "Admin privileges required"}), 403
+
+    tag = Tag.query.get(tag_id)
+    if not tag:
+        return jsonify({"detail": "Tag not found"}), 404
+
+    data = request.get_json()
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({"detail": "user_id is required"}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"detail": "User not found"}), 404
+
+    existing = UserTag.query.filter_by(user_id=user_id, tag_id=tag_id).first()
+    if existing:
+        return jsonify({"detail": "User already in this tag"}), 400
+
+    ut = UserTag(user_id=user_id, tag_id=tag_id)
+    db.session.add(ut)
+    db.session.commit()
+    return jsonify({"message": "User added to tag"}), 201
+
+@app.route('/admin/tags/<int:tag_id>/users/<int:user_id>', methods=['DELETE'])
+def remove_user_from_tag(tag_id, user_id):
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"detail": "Admin token required"}), 401
+    token = auth_header.split(' ')[1]
+    current_admin = get_current_admin(token)
+    if not current_admin:
+        return jsonify({"detail": "Admin privileges required"}), 403
+
+    ut = UserTag.query.filter_by(user_id=user_id, tag_id=tag_id).first()
+    if not ut:
+        return jsonify({"detail": "User not in this tag"}), 404
+
+    db.session.delete(ut)
+    db.session.commit()
+    return jsonify({"message": "User removed from tag"})
+
+@app.route('/admin/documents/<int:document_id>/visibility', methods=['PUT'])
+def update_document_visibility(document_id):
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"detail": "Admin token required"}), 401
+    token = auth_header.split(' ')[1]
+    current_admin = get_current_admin(token)
+    if not current_admin:
+        return jsonify({"detail": "Admin privileges required"}), 403
+
+    document = Document.query.get(document_id)
+    if not document:
+        return jsonify({"detail": "Document not found"}), 404
+
+    data = request.get_json()
+    save_document_visibility(document_id, data)
+    return jsonify({"message": "Visibility updated"})
 
 # Document management endpoints
 @app.route('/admin/documents', methods=['GET'])
@@ -331,29 +584,6 @@ def get_documents():
             "last_updated": last_updated
         }
     })
-
-# User document access endpoint (for regular users)
-@app.route('/documents', methods=['GET'])
-def get_user_documents():
-    auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith('Bearer '):
-        return jsonify({"detail": "Token required"}), 401
-    
-    token = auth_header.split(' ')[1]
-    current_user = get_current_user(token)
-    if not current_user:
-        return jsonify({"detail": "Invalid token"}), 401
-    
-    # Get filter parameters
-    category = request.args.get('category', 'All')
-    
-    # Query documents (same as admin but without statistics)
-    if category != 'All':
-        documents = Document.query.filter_by(category=category).all()
-    else:
-        documents = Document.query.all()
-    
-    return jsonify([doc.to_dict() for doc in documents])
 
 @app.route('/admin/documents/upload', methods=['POST'])
 def upload_document():
@@ -425,7 +655,12 @@ def upload_document():
     
     db.session.add(document)
     db.session.commit()
-    
+
+    # Save visibility rules if provided
+    visibility = request.form.get('visibility')
+    if visibility:
+        save_document_visibility(document.id, visibility)
+
     return jsonify(document.to_dict())
 
 @app.route('/admin/documents/link', methods=['POST'])
@@ -464,7 +699,12 @@ def add_document_link():
     
     db.session.add(document)
     db.session.commit()
-    
+
+    # Save visibility rules if provided
+    visibility = data.get('visibility')
+    if visibility:
+        save_document_visibility(document.id, visibility)
+
     return jsonify(document.to_dict())
 
 @app.route('/admin/documents/<int:document_id>', methods=['DELETE'])
@@ -481,7 +721,10 @@ def delete_document(document_id):
     document = Document.query.get(document_id)
     if not document:
         return jsonify({"detail": "Document not found"}), 404
-    
+
+    # Delete visibility rules
+    DocumentVisibility.query.filter_by(document_id=document_id).delete()
+
     # Delete file from S3 if it exists
     deletion_results = {
         's3_deleted': False,
@@ -856,9 +1099,9 @@ startxref
             app.config['UPLOAD_FOLDER'], 
             document.filename, 
             as_attachment=True,
-            download_name=document.filename
+            download_name=document.title.replace(' ', '_') + '.pdf'
         )
-        
+
         print(f"📥 Response created, content-type: {response.content_type}")
         print(f"📥 Response headers: {dict(response.headers)}")
         
@@ -887,26 +1130,57 @@ def download_document(filename):
 
 @app.route('/documents', methods=['GET'])
 def get_documents_user():
-    """Get all documents for regular users"""
+    """Get documents filtered by user visibility"""
     try:
         auth_header = request.headers.get('Authorization')
         if not auth_header or not auth_header.startswith('Bearer '):
             return jsonify({"detail": "Token required"}), 401
-        
+
         token = auth_header.split(' ')[1]
         current_user = get_current_user(token)
         if not current_user:
             return jsonify({"detail": "Invalid token"}), 401
-        
+
         print(f"📄 User {current_user.username} requesting documents list")
-        
-        # Get all documents
-        documents = Document.query.all()
-        documents_data = [doc.to_dict() for doc in documents]
-        
-        print(f"📄 Found {len(documents_data)} documents for user")
+
+        # Admin sees all documents
+        if current_user.is_admin:
+            documents = Document.query.all()
+            documents_data = [doc.to_dict() for doc in documents]
+            print(f"📄 Admin sees all {len(documents_data)} documents")
+            return jsonify(documents_data)
+
+        # Regular user: filter by visibility
+        all_documents = Document.query.all()
+        visible_docs = []
+
+        # Get user's tag IDs
+        user_tag_ids = [ut.tag_id for ut in UserTag.query.filter_by(user_id=current_user.id).all()]
+
+        for doc in all_documents:
+            rules = DocumentVisibility.query.filter_by(document_id=doc.id).all()
+
+            # No visibility rules = visible to all (backward compat)
+            if not rules:
+                visible_docs.append(doc)
+                continue
+
+            # Check each rule
+            for rule in rules:
+                if rule.visibility_type == 'all':
+                    visible_docs.append(doc)
+                    break
+                elif rule.visibility_type == 'tag' and rule.target_id in user_tag_ids:
+                    visible_docs.append(doc)
+                    break
+                elif rule.visibility_type == 'user' and rule.target_id == current_user.id:
+                    visible_docs.append(doc)
+                    break
+
+        documents_data = [doc.to_dict() for doc in visible_docs]
+        print(f"📄 Found {len(documents_data)} visible documents for user {current_user.username}")
         return jsonify(documents_data)
-        
+
     except Exception as e:
         print(f"Error getting documents for user: {e}")
         return jsonify({"detail": "Error retrieving documents"}), 500

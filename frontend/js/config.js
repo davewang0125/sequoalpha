@@ -1,8 +1,8 @@
 // Configuration for API URLs
 const config = {
-  // Development (localhost)
+  // Development (localhost or direct port access)
   development: {
-    apiUrl: 'http://localhost:8000'
+    apiUrl: window.location.protocol + '//' + window.location.hostname + ':8000'
   },
   // Production - EC2 or custom deployment
   production: {
@@ -21,8 +21,9 @@ const config = {
 };
 
 // Detect environment
-const isDevelopment = window.location.hostname === 'localhost' || 
-                     window.location.hostname === '127.0.0.1';
+const isDevelopment = window.location.hostname === 'localhost' ||
+                     window.location.hostname === '127.0.0.1' ||
+                     window.location.port === '8080';
 const isNetlify = window.location.hostname.includes('netlify.app');
 const isRender = window.location.hostname.includes('onrender.com');
 

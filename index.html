@@ -17,6 +17,9 @@
     
     <!-- Configuration -->
     <script src="frontend/js/config.js"></script>
+
+    <!-- Cloud animation engine -->
+    <script src="frontend/js/clouds.js"></script>
     
     <!-- CSS Files -->
     <link rel="stylesheet" href="css/main.css">
@@ -26,6 +29,9 @@
     <link rel="stylesheet" href="frontend/js/Dashboard.css">
     <link rel="stylesheet" href="frontend/js/UserDashboard.css">
     <link rel="stylesheet" href="frontend/js/DocumentCenter.css">
+    <link rel="stylesheet" href="frontend/js/GroupManager.css">
+    <link rel="stylesheet" href="frontend/js/UserManager.css">
+    <link rel="stylesheet" href="frontend/js/CategoryManager.css">
 </head>
 <body>
     <div id="root"></div>
@@ -36,53 +42,77 @@
     <script type="text/babel" src="frontend/js/Dashboard.js"></script>
     <script type="text/babel" src="frontend/js/UserDashboard.js"></script>
     <script type="text/babel" src="frontend/js/DocumentCenter.js"></script>
-    
+    <script type="text/babel" src="frontend/js/GroupManager.js"></script>
+    <script type="text/babel" src="frontend/js/UserManager.js"></script>
+    <script type="text/babel" src="frontend/js/CategoryManager.js"></script>
+
     <!-- Landing Page Component -->
     <script type="text/babel">
         const LandingPage = ({ onShowLogin }) => {
+            const [showContact, setShowContact] = React.useState(false);
+            const containerRef = React.useRef(null);
+            const cloudRef = React.useRef(null);
+
+            React.useEffect(() => {
+                if (containerRef.current && window.createCloudCanvas && !cloudRef.current) {
+                    cloudRef.current = window.createCloudCanvas(containerRef.current);
+                }
+                return () => {
+                    if (cloudRef.current) {
+                        cloudRef.current.destroy();
+                        cloudRef.current = null;
+                    }
+                };
+            }, []);
+
             return (
-                <div className="landing-page">
-                    {/* Header with logo and login button */}
-                    <div className="header">
-                        <div className="logo"></div>
-                        <button className="login-btn" onClick={onShowLogin}>
-                            🔐 Login
-                        </button>
+                <div className="landing-page" ref={containerRef}>
+                    {/* Background image */}
+                    <div className="landing-bg"></div>
+
+                    {/* Logo - top left */}
+                    <div className="landing-logo">
+                        <img src="images/v1_27.png" alt="SequoAlpha" />
                     </div>
-                    
-                    {/* Main background image with info overlay */}
-                    <div className="hero-section">
-                        <div className="hero-info-overlay">
-                            <h1 className="hero-title">Welcome to SequoAlpha</h1>
-                            <p className="hero-subtitle">Professional Management Solutions</p>
-                            <div className="hero-info">
-                                <div className="info-item">
-                                    <h3>About Us</h3>
-                                    <p>Learn more about SequoAlpha Management LLC and our comprehensive services.</p>
+
+                    {/* Center content */}
+                    <div className="landing-content">
+                        <h1 className="landing-tagline">Seeking alpha through disciplined, systematic investing across global markets.</h1>
+                        <p className="landing-description">
+                            SequoAlpha Management is a quantitative investment firm deploying systematic strategies
+                            across global equity and derivative markets, combining rigorous research with disciplined
+                            risk management to deliver consistent, risk-adjusted returns.
+                        </p>
+                    </div>
+
+                    {/* Bottom left links */}
+                    <div className="landing-bottom-links">
+                        <button className="landing-link" onClick={() => setShowContact(true)}>Contact</button>
+                        <span className="landing-link-sep">|</span>
+                        <button className="landing-link" onClick={onShowLogin}>Investor Login</button>
+                    </div>
+
+                    {/* Contact Modal */}
+                    {showContact && (
+                        <div className="contact-overlay" onClick={() => setShowContact(false)}>
+                            <div className="contact-modal" onClick={(e) => e.stopPropagation()}>
+                                <button className="contact-close" onClick={() => setShowContact(false)}>&times;</button>
+                                <h2>Contact Us</h2>
+                                <div className="contact-item">
+                                    <span className="contact-item-label">Phone</span>
+                                    <a href="tel:+16503089049">650-308-9049</a>
                                 </div>
-                                <div className="info-item">
-                                    <h3>Services</h3>
-                                    <p>Professional management solutions tailored to your business needs.</p>
+                                <div className="contact-item">
+                                    <span className="contact-item-label">Email</span>
+                                    <a href="mailto:info@sequoalpha.com">info@sequoalpha.com</a>
                                 </div>
-                                <div className="info-item">
-                                    <h3>Contact</h3>
-                                    <p>Get in touch with our expert team for personalized assistance.</p>
-                                </div>
-                                <div className="info-item">
-                                    <h3>Support</h3>
-                                    <p>24/7 customer support for all your inquiries and needs.</p>
+                                <div className="contact-item">
+                                    <span className="contact-item-label">Address</span>
+                                    <span>California &amp; Singapore</span>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    {/* Footer */}
-                    <footer className="footer">
-                        <div className="footer-content">
-                            <p>© 2025 SequoAlpha Management LLC. All rights reserved.</p>
-                            <p>Professional management services | Phone: 650-308-9049 | Email: info@sequoalpha.com</p>
-                        </div>
-                    </footer>
+                    )}
                 </div>
             );
         };
@@ -112,6 +142,10 @@
                 setCurrentView('app');
             };
 
+            const handleBackToLanding = () => {
+                setCurrentView('landing');
+            };
+
             const handleLogin = (loginData) => {
                 setIsAuthenticated(true);
                 setUser(loginData);
@@ -131,6 +165,18 @@
                 setAppView('documentCenter');
             };
 
+            const handleOpenGroupManager = () => {
+                setAppView('groupManager');
+            };
+
+            const handleOpenUserManager = () => {
+                setAppView('userManager');
+            };
+
+            const handleOpenCategoryManager = () => {
+                setAppView('categoryManager');
+            };
+
             const handleBackToDashboard = () => {
                 setAppView('dashboard');
             };
@@ -144,18 +190,45 @@
                     if (appView === 'documentCenter') {
                         const token = localStorage.getItem('token');
                         return (
-                            <DocumentCenter 
+                            <DocumentCenter
                                 token={token}
-                                onBack={handleBackToDashboard} 
+                                onBack={handleBackToDashboard}
+                            />
+                        );
+                    } else if (appView === 'groupManager') {
+                        const token = localStorage.getItem('token');
+                        return (
+                            <GroupManager
+                                token={token}
+                                onBack={handleBackToDashboard}
+                            />
+                        );
+                    } else if (appView === 'userManager') {
+                        const token = localStorage.getItem('token');
+                        return (
+                            <UserManager
+                                token={token}
+                                onBack={handleBackToDashboard}
+                            />
+                        );
+                    } else if (appView === 'categoryManager') {
+                        const token = localStorage.getItem('token');
+                        return (
+                            <CategoryManager
+                                token={token}
+                                onBack={handleBackToDashboard}
                             />
                         );
                     } else {
                         if (user && user.is_admin) {
                             return (
-                                <Dashboard 
-                                    user={user} 
-                                    onLogout={handleLogout} 
+                                <Dashboard
+                                    user={user}
+                                    onLogout={handleLogout}
                                     onOpenDocumentCenter={handleOpenDocumentCenter}
+                                    onOpenGroupManager={handleOpenGroupManager}
+                                    onOpenUserManager={handleOpenUserManager}
+                                    onOpenCategoryManager={handleOpenCategoryManager}
                                 />
                             );
                         } else {
@@ -168,7 +241,7 @@
                         }
                     }
                 } else {
-                    return <Login onLogin={handleLogin} />;
+                    return <Login onLogin={handleLogin} onBack={handleBackToLanding} />;
                 }
             }
 

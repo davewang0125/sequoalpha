@@ -62,3 +62,57 @@ class Document(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'created_by': self.created_by
         }
+
+class Tag(db.Model):
+    __tablename__ = 'tags'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    creator = db.relationship('User', backref='created_tags')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'created_by': self.created_by,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+class UserTag(db.Model):
+    __tablename__ = 'user_tags'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    tag_id = db.Column(db.Integer, db.ForeignKey('tags.id'), nullable=False)
+
+    __table_args__ = (db.UniqueConstraint('user_id', 'tag_id', name='uq_user_tag'),)
+
+    user = db.relationship('User', backref='user_tags')
+    tag = db.relationship('Tag', backref='user_tags')
+
+class Category(db.Model):
+    __tablename__ = 'categories'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+class DocumentVisibility(db.Model):
+    __tablename__ = 'document_visibility'
+
+    id = db.Column(db.Integer, primary_key=True)
+    document_id = db.Column(db.Integer, db.ForeignKey('documents.id', ondelete='CASCADE'), nullable=False)
+    visibility_type = db.Column(db.String(10), nullable=False)  # 'all', 'tag', 'user'
+    target_id = db.Column(db.Integer, nullable=True)  # tag_id or user_id depending on type
+
+    document = db.relationship('Document', backref=db.backref('visibility_rules', cascade='all, delete-orphan'))

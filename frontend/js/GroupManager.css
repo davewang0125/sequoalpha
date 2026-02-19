@@ -1,0 +1,277 @@
+.group-manager {
+  padding: 30px;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: 'Poppins', sans-serif;
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 30px;
+  gap: 20px;
+}
+
+.group-header .back-button {
+  background: #f3f4f6;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #374151;
+  transition: all 0.3s ease;
+}
+
+.group-header .back-button:hover {
+  background: #e5e7eb;
+}
+
+.group-header .header-content h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 8px 0;
+}
+
+.group-header .header-content p {
+  color: #6b7280;
+  margin: 0;
+  font-size: 16px;
+}
+
+.create-tag-section {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 30px;
+  align-items: center;
+}
+
+.create-tag-section input {
+  flex: 1;
+  max-width: 300px;
+  padding: 10px 14px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.create-tag-section input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.create-tag-section button {
+  padding: 10px 20px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.create-tag-section button:hover {
+  background: #059669;
+}
+
+.tags-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tag-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.tag-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.tag-card-header .tag-info h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 4px 0;
+}
+
+.tag-card-header .tag-info span {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.tag-card-header .tag-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.tag-card-header .tag-actions button {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.tag-card-header .tag-actions .expand-btn {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.tag-card-header .tag-actions .expand-btn:hover {
+  background: #e5e7eb;
+}
+
+.tag-card-header .tag-actions .delete-tag-btn {
+  background: #ef4444;
+  color: white;
+}
+
+.tag-card-header .tag-actions .delete-tag-btn:hover {
+  background: #dc2626;
+}
+
+.tag-card-body {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.add-member-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  align-items: center;
+}
+
+.add-member-row select {
+  flex: 1;
+  max-width: 250px;
+  padding: 8px 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.add-member-row button {
+  padding: 8px 16px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.add-member-row button:hover {
+  background: #2563eb;
+}
+
+.members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.member-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f9fafb;
+  border-radius: 6px;
+}
+
+.member-row .member-info {
+  font-size: 14px;
+  color: #374151;
+}
+
+.member-row .member-info .member-email {
+  font-size: 12px;
+  color: #6b7280;
+  margin-left: 8px;
+}
+
+.member-row .remove-btn {
+  padding: 4px 10px;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.3s ease;
+}
+
+.member-row .remove-btn:hover {
+  background: #fee2e2;
+}
+
+.no-members {
+  font-size: 13px;
+  color: #9ca3af;
+  padding: 8px 0;
+}
+
+.gm-message {
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.gm-message.success {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.gm-message.error {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.no-tags {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .group-manager {
+    padding: 20px;
+  }
+  .create-tag-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .create-tag-section input {
+    max-width: none;
+  }
+  .add-member-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .add-member-row select {
+    max-width: none;
+  }
+}

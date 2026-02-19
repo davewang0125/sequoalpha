@@ -1,6 +1,6 @@
 
 
-const Login = ({ onLogin }) => {
+const Login = ({ onLogin, onBack }) => {
   const [username, setUsername] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [loading, setLoading] = React.useState(false);
@@ -55,6 +55,9 @@ const Login = ({ onLogin }) => {
   return (
     <div className="login-container">
       <div className="login-card">
+        {onBack && (
+          <button className="login-close" onClick={onBack} aria-label="Back to home">&times;</button>
+        )}
         <div className="login-header">
           <h1>SequoAlpha Management</h1>
           <p>Secure Login Portal</p>

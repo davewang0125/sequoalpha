@@ -1,5 +1,5 @@
 from main import app, db
-from models import User, Document
+from models import User, Document, Tag, UserTag, DocumentVisibility, Category
 from datetime import datetime
 import bcrypt
 import os
@@ -186,6 +186,16 @@ def init_database():
         else:
             print("ℹ️ Sample documents already exist")
         
+        # Seed default categories if table is empty
+        if Category.query.count() == 0:
+            default_categories = ['Factsheets', 'Reports', 'Legal', 'Other']
+            for name in default_categories:
+                db.session.add(Category(name=name))
+            db.session.commit()
+            print("✅ Default categories created successfully!")
+        else:
+            print("ℹ️ Categories already exist")
+
         print("🎉 Database initialization completed!")
 
 if __name__ == '__main__':
