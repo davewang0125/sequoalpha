@@ -26,12 +26,13 @@ const isDevelopment = window.location.hostname === 'localhost' ||
                      window.location.port === '8080';
 const isNetlify = window.location.hostname.includes('netlify.app');
 const isRender = window.location.hostname.includes('onrender.com');
+const isCustomDomain = window.location.hostname.includes('sequoalpha.com');
 
 // Select configuration
 let currentConfig;
 if (isDevelopment) {
   currentConfig = config.development;
-} else if (isNetlify) {
+} else if (isNetlify || isCustomDomain) {
   currentConfig = config.netlify;
 } else if (isRender) {
   currentConfig = config.render;
