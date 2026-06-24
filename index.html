@@ -9,11 +9,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- React and ReactDOM CDN -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    
-    <!-- Babel for JSX -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+
+    <!-- Babel for JSX (pinned: 8.x defaults preset-react to "automatic" runtime, which UMD React can't satisfy) -->
+    <script src="https://unpkg.com/@babel/standalone@7.29.7/babel.min.js"></script>
     
     <!-- Configuration -->
     <script src="frontend/js/config.js"></script>
